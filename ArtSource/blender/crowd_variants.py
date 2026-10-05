@@ -21,3 +21,22 @@ VARIANTS = [
     dict(name="c10", ph=dict(gender=1.0, age=0.5, muscle=0.5, weight=0.55, height=0.55, race=dict(asian=0.5, caucasian=0.5, african=0)),
          skin="young_caucasian_male2", clothes=["male_casualsuit03", "shoes02"], hair="short01"),
 ]
+
+VARIANTS += [
+    dict(name="c11", ph=dict(gender=0.0, age=0.42, muscle=0.5, weight=0.42, height=0.5, race=dict(asian=0, caucasian=1, african=0)),
+         skin="young_caucasian_female2", clothes=["female_casualsuit01", "shoes06"], hair="braid01"),
+    dict(name="c12", ph=dict(gender=1.0, age=0.4, muscle=0.65, weight=0.5, height=0.6, race=dict(asian=0, caucasian=0, african=1)),
+         skin="young_african_male", clothes=["male_casualsuit05", "shoes02"], hair="short02"),
+    dict(name="c13", ph=dict(gender=1.0, age=0.4, muscle=0.5, weight=0.4, height=0.55, race=dict(asian=1, caucasian=0, african=0)),
+         skin="young_asian_male", clothes=["male_casualsuit06", "shoes01"], hair="short04"),
+    dict(name="c14", ph=dict(gender=1.0, age=0.45, muscle=0.55, weight=0.6, height=0.5, race=dict(asian=0, caucasian=1, african=0)),
+         skin="young_caucasian_male", clothes=["male_casualsuit04", "shoes03"], hair="short03"),
+    dict(name="c15", ph=dict(gender=0.0, age=0.4, muscle=0.5, weight=0.55, height=0.45, race=dict(asian=0, caucasian=0.2, african=0.8)),
+         skin="young_african_female", clothes=["female_casualsuit02", "shoes05"], hair="bob02"),
+    dict(name="c16", ph=dict(gender=0.0, age=0.38, muscle=0.5, weight=0.4, height=0.4, race=dict(asian=1, caucasian=0, african=0)),
+         skin="young_asian_female", clothes=["female_sportsuit01", "shoes04"], hair="ponytail01"),
+    dict(name="c17", ph=dict(gender=1.0, age=0.65, muscle=0.5, weight=0.65, height=0.6, race=dict(asian=0, caucasian=0, african=1)),
+         skin="middleage_african_male", clothes=["male_casualsuit03", "shoes06"], hair="short01"),
+    dict(name="c18", ph=dict(gender=0.0, age=0.45, muscle=0.45, weight=0.45, height=0.6, race=dict(asian=0, caucasian=1, african=0)),
+         skin="young_caucasian_female", clothes=["female_elegantsuit01", "shoes02"], hair="long01"),
+]

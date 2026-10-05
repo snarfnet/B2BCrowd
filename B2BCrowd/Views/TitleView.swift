@@ -6,7 +6,9 @@ struct TitleView: View {
 
     var body: some View {
         ZStack {
-            CrowdView(energy: 72, venue: .tokyoNight, reactions: [], active: true)
+            Booth3DView(state: BoothState(owner: 0, currentID: "title", nextID: nil, nextHidden: false, phase: .playing,
+                                          selector: 1, energy: 72, venue: .tokyoNight,
+                                          current: DemoCatalog.tracks.first, next: nil))
                 .ignoresSafeArea()
                 .overlay(LinearGradient(colors: [.black.opacity(0.2), .black.opacity(0.85)], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
 

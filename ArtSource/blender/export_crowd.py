@@ -37,6 +37,8 @@ def simplify_materials(o):
                 nt.links.new(t.outputs["Alpha"], b.inputs["Alpha"])
         print("MAT", o.name, m.name, diffuse.name if diffuse else None)
 
+LOD = "--lod" in sys.argv
+
 def export_one(v):
     mh.clear(); mh.ensure_pack()
     proxy = "male_generic" if v["ph"]["gender"] > 0.5 else "female_generic"
@@ -49,6 +51,9 @@ def export_one(v):
             bpy.data.objects.remove(o, do_unlink=True)
             continue
         if o.type == "MESH":
+            if LOD and not any(k in o.name for k in ("low-poly", "eyebrow", "eyelash")):
+                dm = o.modifiers.new("lod", "DECIMATE")
+                dm.ratio = 0.22 if "generic" in o.name else 0.35
             o.modifiers.new("tri", "TRIANGULATE")
             for md in o.modifiers:
                 if md.type == "SUBSURF":
@@ -61,8 +66,9 @@ def export_one(v):
     rig.name = "rig"
     d = os.path.join(OUT, v["name"])
     os.makedirs(d, exist_ok=True)
+    fname = v["name"] + ("_lod" if LOD else "")
     bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.wm.collada_export(filepath=os.path.join(d, v["name"] + ".dae"), selected=True, apply_modifiers=True,
+    bpy.ops.wm.collada_export(filepath=os.path.join(d, fname + ".dae"), selected=True, apply_modifiers=True,
                               triangulate=True, include_armatures=True, deform_bones_only=True,
                               use_texture_copies=True, export_global_forward_selection="-Z",
                               export_global_up_selection="Y", apply_global_orientation=True,

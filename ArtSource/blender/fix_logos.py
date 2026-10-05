@@ -5,6 +5,8 @@ BOXES = {  # 正規化座標 (x0, y0, x1, y1)
     'female_casualsuit01': (0.69, 0.10, 0.95, 0.36),
     'male_casualsuit02': (0.43, 0.09, 0.64, 0.33),
     'male_casualsuit04': (0.45, 0.09, 0.64, 0.33),
+    'female_casualsuit02': (0.69, 0.10, 0.95, 0.36),
+    'male_casualsuit06': (0.18, 0.08, 0.78, 0.22),
 }
 for c, (x0, y0, x1, y1) in BOXES.items():
     p = os.path.join(D, c, c + '_diffuse.png')

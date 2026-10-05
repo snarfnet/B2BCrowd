@@ -120,36 +120,16 @@ private final class Person {
 
 private final class ArmRig {
     let arm: SCNNode, fore: SCNNode, hand: SCNNode
-    let qArm0: simd_quatf, qFore0: simd_quatf, qHand0: simd_quatf
+    let qArm0: simd_quatf, qFore0: simd_quatf, qHand0: simd_quatf    // バインド時のワールド向き
     let armDir0: SIMD3<Float>, foreDir0: SIMD3<Float>
     let l1: Float, l2: Float
     let handDir0: SIMD3<Float>, palm0: SIMD3<Float>
     var fingers: [(node: SCNNode, bind: simd_quatf, axis: SIMD3<Float>, sign: Float, finger: Int)] = []
     var tip = SIMD3<Float>(0, 0, 0)
     var curl: [Float] = [0.5, 0.5, 0.5, 0.5, 0.3]   // 人差し指・中指・薬指・小指・親指
-    let shoulder: SIMD3<Float>
-    let side: Float            // 体の右側の手なら +1、左側なら -1
-    let sArm: SIMD3<Float>, sFore: SIMD3<Float>, sHand: SIMD3<Float>   // 骨のワールド拡大率（MakeHuman の 0.1 倍など）
+    let side: Float            // 画面右側の手なら +1、左側なら -1
 
-    private static func scaleOf(_ n: SCNNode) -> SIMD3<Float> {
-        let m = n.simdWorldTransform
-        return SIMD3(simd_length(SIMD3(m.columns.0.x, m.columns.0.y, m.columns.0.z)),
-                     simd_length(SIMD3(m.columns.1.x, m.columns.1.y, m.columns.1.z)),
-                     simd_length(SIMD3(m.columns.2.x, m.columns.2.y, m.columns.2.z)))
-    }
-
-    /// 拡大率を保ったままワールド位置・向きを決める
-    private func place(_ n: SCNNode, _ p: SIMD3<Float>, _ q: simd_quatf, _ s: SIMD3<Float>) {
-        var m = simd_float4x4(q)
-        m.columns.0 *= s.x
-        m.columns.1 *= s.y
-        m.columns.2 *= s.z
-        m.columns.3 = SIMD4(p.x, p.y, p.z, 1)
-        let parent = n.parent?.simdWorldTransform ?? matrix_identity_float4x4
-        n.simdTransform = parent.inverse * m
-    }
-
-    init?(model: SCNNode, prefix: String, shoulder: SIMD3<Float>, side: Float) {
+    init?(model: SCNNode, prefix: String, side: Float) {
         func n(_ s: String) -> SCNNode? {
             model.childNode(withName: "mixamorig:\(prefix)\(s)", recursively: true)
                 ?? model.childNode(withName: "rig_mixamorig_\(prefix)\(s)", recursively: true)
@@ -157,8 +137,6 @@ private final class ArmRig {
         guard let a = n("Arm"), let f = n("ForeArm"), let h = n("Hand"),
               let mid = n("HandMiddle1"), let idx = n("HandIndex1"), let pinky = n("HandPinky1") else { return nil }
         arm = a; fore = f; hand = h
-        sArm = Self.scaleOf(a); sFore = Self.scaleOf(f); sHand = Self.scaleOf(h)
-        self.shoulder = shoulder
         self.side = side
         qArm0 = a.simdWorldOrientation
         qFore0 = f.simdWorldOrientation
@@ -182,7 +160,6 @@ private final class ArmRig {
                 let qw = node.simdWorldOrientation
                 let axisWorld = fi == 4 ? handDir0 : across
                 let axisLocal = simd_normalize(qw.inverse.act(axisWorld))
-                // 指が手のひら側へ曲がる向きを決める
                 let child = node.childNodes.first
                 let dirW = child.map { simd_normalize($0.simdWorldPosition - node.simdWorldPosition) } ?? handDir0
                 let turned = simd_quatf(angle: 0.3, axis: axisWorld).act(dirW)
@@ -192,27 +169,34 @@ private final class ArmRig {
         }
     }
 
-    /// 指先が tip に来るように腕全体を置く
+    /// ワールドでの向きを、親に対するローカルの向きに直して入れる（位置・拡大率は骨の階層に任せる）
+    private func orient(_ n: SCNNode, _ world: simd_quatf) {
+        let parent = n.parent?.simdWorldOrientation ?? simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
+        n.simdOrientation = parent.inverse * world
+    }
+
+    /// 指先が tip に来るように肩から先を曲げる
     func solve(tip: SIMD3<Float>, handDir: SIMD3<Float>, palm: SIMD3<Float>) {
         let hd = simd_normalize(handDir)
         var pn = palm - hd * simd_dot(palm, hd)
         pn = simd_length(pn) < 1e-4 ? SIMD3(0, -1, 0) : simd_normalize(pn)
-        let wrist = tip - hd * 0.16 - pn * 0.02
+        let wrist = tip - hd * 0.15 - pn * 0.02
+        let shoulder = arm.simdWorldPosition
 
-        // 2本の骨の IK（肘は外側やや下へ）
+        // 2本の骨の IK（肘は外側やや下・後ろへ）
         var d = wrist - shoulder
-        var dist = simd_length(d)
+        var dist = max(0.05, simd_length(d))
         let maxReach = l1 + l2 - 0.002
         if dist > maxReach { d = d / dist * maxReach; dist = maxReach }
         let dir = d / dist
         let a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist)
         let h = sqrt(max(0, l1 * l1 - a * a))
-        var pole = SIMD3<Float>(side * 0.8, -0.6, 0.3)
+        var pole = SIMD3<Float>(side * 0.7, -0.6, 0.4)
         pole = simd_normalize(pole - dir * simd_dot(pole, dir))
         let elbow = shoulder + dir * a + pole * h
         let w = shoulder + d
 
-        // 3本の骨を「骨の向き＋手のひらの向き」で同じようにそろえる（ねじれを均等にする）
+        // 3本の骨を「骨の向き＋手のひらの向き」でそろえる
         func frame(_ y: SIMD3<Float>, _ ref: SIMD3<Float>) -> simd_float3x3 {
             var r = ref - y * simd_dot(ref, y)
             if simd_length(r) < 1e-4 { r = simd_cross(y, SIMD3<Float>(1, 0, 0)) }
@@ -220,12 +204,11 @@ private final class ArmRig {
             return simd_float3x3(columns: (y, r, simd_normalize(simd_cross(y, r))))
         }
         func aim(_ q0: simd_quatf, _ y0: SIMD3<Float>, _ y1: SIMD3<Float>) -> simd_quatf {
-            let r = frame(y1, pn) * frame(y0, palm0).transpose
-            return simd_quatf(r) * q0
+            simd_quatf(frame(y1, pn) * frame(y0, palm0).transpose) * q0
         }
-        place(arm, shoulder, aim(qArm0, armDir0, simd_normalize(elbow - shoulder)), sArm)
-        place(fore, elbow, aim(qFore0, foreDir0, simd_normalize(w - elbow)), sFore)
-        place(hand, w, aim(qHand0, handDir0, hd), sHand)
+        orient(arm, aim(qArm0, armDir0, simd_normalize(elbow - shoulder)))
+        orient(fore, aim(qFore0, foreDir0, simd_normalize(w - elbow)))
+        orient(hand, aim(qHand0, handDir0, hd))
 
         for f in fingers {
             let c = curl[f.finger] * (f.finger == 4 ? 0.9 : 1.15)
@@ -278,6 +261,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private let strobe = SCNNode()
     private var confetti: SCNParticleSystem?
     private var ledWall: SCNNode?
+    private var hazes: [SCNNode] = []
 
     private var lastTime: TimeInterval = 0
     private var artCache: [String: UIImage] = [:]
@@ -307,10 +291,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         cam.exposureOffset = -0.1
         cam.saturation = 1.08
         cameraNode.camera = cam
-        cameraNode.position = SCNVector3(0, 0.95, 1.2)
-        cameraNode.look(at: SCNVector3(0, -0.25, -2.4))
+        cameraNode.position = SCNVector3(0, 1.05, 1.55)
+        cameraNode.look(at: SCNVector3(0, -0.25, -2.2))
         if ProcessInfo.processInfo.arguments.contains("-boothcam") {   // 手元の確認用
-            cameraNode.position = SCNVector3(0, 0.75, 0.85)
+            cameraNode.position = SCNVector3(0.1, 0.95, 1.1)
             cameraNode.look(at: SCNVector3(0, 0, -0.1))
         }
         scene.rootNode.addChildNode(cameraNode)
@@ -339,7 +323,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private func buildVenue() {
         let (top, bottom, light) = venue.palette
         // 床
-        let floor = SCNNode(geometry: SCNPlane(width: 40, height: 40))
+        let floor = SCNNode(geometry: SCNPlane(width: 60, height: 60))
         floor.eulerAngles.x = -.pi / 2
         floor.position = SCNVector3(0, -1.02, -8)
         let fm = SCNMaterial()
@@ -347,6 +331,23 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         pbr(fm, rough: 0.32, metal: 0.1)
         floor.geometry?.materials = [fm]
         scene.rootNode.addChildNode(floor)
+        // もや（薄い板を何枚か重ねて空気の厚みを出す）
+        let hazeImg = Self.hazeImage()
+        for (k, z) in ([-3.5, -6.5, -9.5, -12.5] as [Float]).enumerated() {
+            let hz = SCNNode(geometry: SCNPlane(width: 24, height: 7))
+            let hm = SCNMaterial()
+            hm.lightingModel = .constant
+            hm.diffuse.contents = hazeImg
+            hm.multiply.contents = UIColor(light)
+            hm.blendMode = .add
+            hm.writesToDepthBuffer = false
+            hm.isDoubleSided = true
+            hz.geometry?.materials = [hm]
+            hz.position = SCNVector3(Float(k % 2) * 1.5 - 0.75, 2.0, z)
+            hz.opacity = 0.16
+            scene.rootNode.addChildNode(hz)
+            hazes.append(hz)
+        }
         // 奥の壁と LED ウォール
         let wall = SCNNode(geometry: SCNPlane(width: 30, height: 12))
         wall.position = SCNVector3(0, 4, -14)
@@ -461,8 +462,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         for i in 0..<screens.count { applyScreen(i, title: nil, mode: "STANDBY", color: .gray) }
     }
 
-    private func loadCharacter(_ name: String) -> SCNNode? {
-        guard let s = SCNScene(named: "Crowd.scnassets/\(name)/\(name).dae") else { return nil }
+    private func loadCharacter(_ name: String, lod: Bool = false) -> SCNNode? {
+        let file = lod ? "\(name)_lod" : name
+        guard let s = SCNScene(named: "Crowd.scnassets/\(name)/\(file).dae") else { return nil }
         let n = SCNNode()
         for c in s.rootNode.childNodes { n.addChildNode(c) }
         n.enumerateHierarchy { node, _ in
@@ -483,15 +485,25 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
 
     /// スキン付きノードを複製し、骨の参照を複製側に付け替える
-    private func cloneSkinned(_ template: SCNNode) -> SCNNode {
+    private func cloneSkinned(_ template: SCNNode, tint: UIColor? = nil) -> SCNNode {
         let c = template.clone()
         c.enumerateHierarchy { node, _ in
             guard let s = node.skinner else { return }
+            let lname = (node.name ?? "").lowercased()
+            let recolor = tint != nil && lname.contains("suit")
+            if recolor, let g = node.geometry?.copy() as? SCNGeometry {
+                g.materials = g.materials.map { m in
+                    let n = (m.copy() as? SCNMaterial) ?? m
+                    n.multiply.contents = tint
+                    return n
+                }
+                node.geometry = g
+            }
             let bones: [SCNNode] = s.bones.compactMap { b in
                 guard let nm = b.name else { return nil }
                 return c.childNode(withName: nm, recursively: true)
             }
-            guard bones.count == s.bones.count, let base = s.baseGeometry ?? node.geometry else { return }
+            guard bones.count == s.bones.count, let base = recolor ? node.geometry : (s.baseGeometry ?? node.geometry) else { return }
             let ns = SCNSkinner(baseGeometry: base, bones: bones, boneInverseBindTransforms: s.boneInverseBindTransforms,
                                 boneWeights: s.boneWeights, boneIndices: s.boneIndices)
             if let sk = s.skeleton?.name { ns.skeleton = c.childNode(withName: sk, recursively: true) }
@@ -501,32 +513,43 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
 
     private func buildCrowd() {
-        let names = (1...10).map { String(format: "c%02d", $0) }
-        let templates = names.compactMap { loadCharacter($0) }
-        guard !templates.isEmpty else { return }
-        let count = min(34, venue.crowdSize)
+        let names = (1...18).map { String(format: "c%02d", $0) }
+        let near = names.compactMap { loadCharacter($0) }
+        let far = names.compactMap { loadCharacter($0, lod: true) }
+        guard !near.isEmpty else { return }
+        let count = min(96, venue.crowdSize * 2 + 20)
         var seed: UInt64 = 0x9E3779B97F4A7C15 &+ UInt64(abs(venue.rawValue.hashValue) % 1000)
         func rnd() -> Float {
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
             return Float(seed >> 40) / Float(1 << 24)
         }
+        // 服の色（元の色に掛け合わせる。白はそのまま）
+        let palette: [UIColor] = [.white, .white, .white, UIColor(white: 0.25, alpha: 1), UIColor(white: 0.45, alpha: 1),
+                                  UIColor(red: 0.85, green: 0.35, blue: 0.35, alpha: 1), UIColor(red: 0.55, green: 0.6, blue: 0.4, alpha: 1),
+                                  UIColor(red: 0.95, green: 0.85, blue: 0.6, alpha: 1), UIColor(red: 0.6, green: 0.45, blue: 0.75, alpha: 1),
+                                  UIColor(red: 0.4, green: 0.55, blue: 0.8, alpha: 1), UIColor(red: 0.9, green: 0.6, blue: 0.75, alpha: 1)]
         let boneNames = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand",
                          "RightShoulder", "RightArm", "RightForeArm", "RightHand", "LeftUpLeg", "LeftLeg", "LeftFoot",
                          "RightUpLeg", "RightLeg", "RightFoot"]
         var placed: [SIMD2<Float>] = []
         for i in 0..<count {
             var pos = SIMD2<Float>(0, 0)
-            for _ in 0..<30 {
-                let depth: Float = 2.2 + powf(rnd(), 0.8) * 7.0
-                let half: Float = 1.3 + (depth - 1.5) * 0.45
-                pos = SIMD2((rnd() * 2 - 1) * half, -depth)
-                if placed.allSatisfy({ simd_distance($0, pos) > 0.55 }) { break }
+            for _ in 0..<40 {
+                let depth: Float = 2.2 + powf(rnd(), 0.9) * 10.5
+                let half: Float = 1.4 + (depth - 2.2) * 0.5
+                pos = SIMD2((rnd() * 2 - 1) * min(half, 6.2), -depth)
+                if placed.allSatisfy({ simd_distance($0, pos) > 0.52 }) { break }
             }
             placed.append(pos)
-            let node = cloneSkinned(templates[i % templates.count])
+            let useFar = -pos.y > 5.5 && !far.isEmpty
+            let pool = useFar ? far : near
+            let ti = Int(rnd() * Float(palette.count)) % palette.count
+            let node = cloneSkinned(pool[(i * 7 + Int(rnd() * 5)) % pool.count], tint: ti < 3 ? nil : palette[ti])
             node.position = SCNVector3(pos.x, -1.02, pos.y)
             // DJ のほうを向く（少しばらつかせる）
-            node.eulerAngles.y = atan2(-pos.x, 1.0 - pos.y) + (rnd() - 0.5) * 0.4
+            node.eulerAngles.y = atan2(-pos.x, 1.0 - pos.y) + (rnd() - 0.5) * 0.5
+            let sc = 0.95 + rnd() * 0.1
+            node.scale = SCNVector3(sc, sc, sc)
             scene.rootNode.addChildNode(node)
 
             let special: Int = i < 6 ? [1, 2, 3, 4, 5, 0][i] : 0
@@ -545,26 +568,29 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
 
     private func buildArms() {
-        // DJ A は左、DJ B は右に立つ。DJ はカメラと同じく -z（観客側）を向く
-        let setups: [(String, Float)] = [("arms_a", -0.45), ("arms_b", 0.45)]
-        for (name, cx) in setups {
-            guard let s = SCNScene(named: "Booth.scnassets/\(name).dae") else { arms.append([]); continue }
-            let model = SCNNode()
-            for c in s.rootNode.childNodes { model.addChildNode(c) }
-            model.enumerateHierarchy { node, _ in
-                let isBody = (node.name ?? "").contains("body")
-                for m in node.geometry?.materials ?? [] {
-                    self.pbr(m, rough: isBody ? 0.5 : 0.85)
-                    // 袖は濃い色に（白いと照明で飛ぶ）
-                    if !isBody { m.multiply.contents = cx < 0 ? UIColor(white: 0.12, alpha: 1) : UIColor(red: 0.15, green: 0.18, blue: 0.3, alpha: 1) }
-                }
+        // DJ A は左、DJ B は右。観客側（-z）を向いてブースの手前に立つ
+        let setups: [(String, Float)] = [("c09", -0.42), ("c02", 0.42)]
+        let boneNames = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftShoulder", "RightShoulder",
+                         "LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot"]
+        for (k, (name, cx)) in setups.enumerated() {
+            guard let t = loadCharacter(name) else { arms.append([]); continue }
+            let dj = cloneSkinned(t, tint: k == 0 ? UIColor(white: 0.18, alpha: 1) : UIColor(red: 0.2, green: 0.22, blue: 0.3, alpha: 1))
+            dj.position = SCNVector3(cx, -1.02, 0.5)
+            dj.eulerAngles.y = .pi
+            scene.rootNode.addChildNode(dj)
+            // 体は観客と同じ仕組みで小さく揺らす（腕は後で IK が上書き）
+            let p = Person(root: dj, phase: Float(k) * 0.37, speed: 1, bias: 0, special: 6, phoneUser: false)
+            for b in boneNames {
+                let key = "mixamorig:\(b)"
+                guard let bn = dj.childNode(withName: key, recursively: true)
+                        ?? dj.childNode(withName: "rig_mixamorig_\(b)", recursively: true) else { continue }
+                p.bones.append((bn, key, bn.simdOrientation))
+                if b == "Hips" { p.hips = bn; p.hipsBind = bn.simdPosition }
             }
-            scene.rootNode.addChildNode(model)
-            // 前を向いた DJ の左手は画面の左（-x）
-            let ls = SIMD3<Float>(cx - 0.19, 0.44, 0.6)
-            let rs = SIMD3<Float>(cx + 0.19, 0.44, 0.6)
-            let left = ArmRig(model: model, prefix: "Left", shoulder: ls, side: -1)
-            let right = ArmRig(model: model, prefix: "Right", shoulder: rs, side: 1)
+            people.append(p)
+            // 観客側を向いているので、本人の左手は画面の左
+            let left = ArmRig(model: dj, prefix: "Left", side: -1)
+            let right = ArmRig(model: dj, prefix: "Right", side: 1)
             // [外側, 内側]
             arms.append(cx < 0 ? [left, right].compactMap { $0 } : [right, left].compactMap { $0 })
         }
@@ -755,8 +781,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     private func restTip(_ d: Int, outer: Bool) -> SIMD3<Float> {
         let cx: Float = d == 0 ? -0.45 : 0.45
-        if outer { return SIMD3(cx + (d == 0 ? -0.12 : 0.12), 0.0, 0.33) }
-        return SIMD3(cx + (d == 0 ? 0.16 : -0.16), 0.0, 0.33)
+        if outer { return SIMD3(cx + (d == 0 ? -0.14 : 0.14), 0.0, 0.3) }
+        return SIMD3(cx + (d == 0 ? 0.12 : -0.12), 0.0, 0.3)
     }
 
     @MainActor
@@ -830,12 +856,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
 
     private func clipFor(_ p: Person, energy: Double) -> String {
-        if energy >= 99.5 { return "jump" }
+        if energy >= 99.5 { return p.special == 6 ? "sway" : "jump" }
         switch p.special {
         case 1: return "crossed"
         case 2: return energy >= 90 ? "clap" : "crossed"
         case 3: return energy >= 60 ? "jump" : "hands_up"
         case 4: return energy >= 40 ? "bounce" : "sway"
+        case 6: return "sway"
         default: break
         }
         let e = energy + p.bias
@@ -977,6 +1004,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let legend = energy >= 99.5
         strobe.light?.intensity = legend && sin(t * 24) > 0.85 ? 4000 : 0
         confetti?.birthRate = legend ? 220 : 0
+        for (k, h) in hazes.enumerated() {
+            h.opacity = CGFloat(0.08 + e * 0.18 + sin(t * 0.3 + Float(k)) * 0.03)
+            h.position.x = sin(t * 0.07 + Float(k) * 2) * 1.2
+        }
         ledWall?.geometry?.firstMaterial?.diffuse.intensity = CGFloat(0.35 + e * 0.9 + (legend ? sin(t * 10) * 0.3 : 0))
     }
 
@@ -1090,6 +1121,21 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             while x < w { cg.fill(CGRect(x: x, y: 0, width: 1, height: h)); x += 4 }
             var y: CGFloat = 0
             while y < h { cg.fill(CGRect(x: 0, y: y, width: w, height: 1)); y += 4 }
+        }
+    }
+
+    private static func hazeImage() -> UIImage {
+        // ふわっとした雲。ぼかした丸を重ねる
+        let w: CGFloat = 256, h: CGFloat = 128
+        var seed: UInt64 = 42
+        func r() -> CGFloat { seed = seed &* 6364136223846793005 &+ 1; return CGFloat(seed >> 40) / CGFloat(1 << 24) }
+        return UIGraphicsImageRenderer(size: CGSize(width: w, height: h)).image { ctx in
+            let cg = ctx.cgContext
+            let g = CGGradient(colorsSpace: nil, colors: [UIColor(white: 1, alpha: 0.12).cgColor, UIColor(white: 1, alpha: 0).cgColor] as CFArray, locations: [0, 1])!
+            for _ in 0..<60 {
+                let cx = r() * w, cy = h * (0.3 + r() * 0.5), rad = 20 + r() * 50
+                cg.drawRadialGradient(g, startCenter: CGPoint(x: cx, y: cy), startRadius: 0, endCenter: CGPoint(x: cx, y: cy), endRadius: rad, options: [])
+            }
         }
     }
 
