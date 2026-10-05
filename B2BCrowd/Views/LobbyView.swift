@@ -74,6 +74,24 @@ struct LobbyView: View {
                             .onChange(of: crowdSound) { _, v in SoundFX.shared.enabled = v }
                     }
 
+                    section("VJ") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(VJMode.allCases) { m in
+                                    Button(m.title) { app.config.vjMode = m }
+                                        .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                                        .padding(.horizontal, 12).padding(.vertical, 7)
+                                        .background(Capsule().fill(app.config.vjMode == m ? Color.purple.opacity(0.45) : .white.opacity(0.08)))
+                                        .overlay(Capsule().stroke(app.config.vjMode == m ? .purple : .clear))
+                                        .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        Text(L.t("LED 画面の映像。曲のジャケットとタイトル、盛り上がりで変わります（音は解析しません）。",
+                                 "Visuals on the LED screens, driven by artwork, title and crowd energy (no audio analysis)."))
+                            .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    }
+
                     section("VENUE") {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
@@ -168,7 +186,7 @@ struct LobbyView: View {
                         } label: {
                             VStack(spacing: 3) {
                                 Group {
-                                    if let img = UIImage(named: "char_\(c.id)") {
+                                    if let img = UIImage(named: "char_\(c.id).jpg") {
                                         Image(uiImage: img).resizable().scaledToFill()
                                     } else {
                                         Color.white.opacity(0.1)

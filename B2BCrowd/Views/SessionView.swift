@@ -87,7 +87,8 @@ struct SessionView: View {
         BoothState(owner: game.currentOwner, currentID: game.current?.id, nextID: game.next?.id,
                    nextHidden: game.config.isSecret && game.phase != .transition, phase: game.phase,
                    selector: game.selector, energy: Int(game.energy.rounded()), venue: game.config.venue,
-                   current: game.current, next: game.next, characters: game.config.characters)
+                   current: game.current, next: game.next, characters: game.config.characters,
+                   vjMode: game.config.vjMode, djName: game.name(game.currentOwner))
     }
 
     private var eventFeed: some View {

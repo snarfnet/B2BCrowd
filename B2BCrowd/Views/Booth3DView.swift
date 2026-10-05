@@ -17,10 +17,13 @@ struct BoothState: Equatable {
     var current: Track?
     var next: Track?
     var characters: [String] = ["c09", "c02"]
+    var vjMode: VJMode = .auto
+    var djName: String = ""
 
     static func == (l: BoothState, r: BoothState) -> Bool {
         l.owner == r.owner && l.currentID == r.currentID && l.nextID == r.nextID && l.nextHidden == r.nextHidden
             && l.phase == r.phase && l.selector == r.selector && l.energy == r.energy && l.venue == r.venue
+            && l.vjMode == r.vjMode
     }
 }
 
@@ -32,7 +35,11 @@ struct Booth3DView: UIViewRepresentable {
     func makeUIView(context: Context) -> SCNView {
         let v = SCNView(frame: .zero)
         let club = context.coordinator
-        v.scene = club.scene
+        club.view = v
+        // シェーダーの準備を裏で済ませてから表示（起動直後に固まらないように）
+        v.prepare([club.scene]) { _ in
+            DispatchQueue.main.async { v.scene = club.scene }
+        }
         v.pointOfView = club.cameraNode
         v.delegate = club
         v.backgroundColor = .black
@@ -226,6 +233,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     let scene = SCNScene()
     let cameraNode = SCNNode()
+    weak var view: SCNView?
 
     private let lock = NSLock()
     private var st = BoothState(owner: 0, currentID: nil, nextID: nil, nextHidden: false, phase: .searchingTrack,
@@ -264,6 +272,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var confetti: SCNParticleSystem?
     private var ledWall: SCNNode?
     private var hazes: [SCNNode] = []
+    // VJ
+    private var vjMaterials: [SCNMaterial] = []
+    private var vjModeNow: Float = 0
+    private var vjOn = true
+    private var vjCutAt: Float = -10
+    private var vjTimeNow: Float = 0
+    private var vjAutoIndex = 0
 
     private var lastTime: TimeInterval = 0
     private var ready = false   // 機材と人物の読み込みが終わったら true
@@ -328,7 +343,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             let root = SCNNode()
             let crowd = buildCrowd(into: root)
             let (djs, rigs) = buildArms(into: root)
-            DispatchQueue.main.async { [self] in
+            let attach = { [self] in
                 scene.rootNode.addChildNode(gear)
                 scene.rootNode.addChildNode(root)
                 lock.lock()
@@ -339,6 +354,14 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 if let s = lastApplied {
                     lastApplied = nil
                     apply(s)
+                }
+            }
+            // 足す前にシェーダーを裏で用意
+            DispatchQueue.main.async { [self] in
+                if let v = view {
+                    v.prepare([gear, root]) { _ in DispatchQueue.main.async { attach() } }
+                } else {
+                    attach()
                 }
             }
         }
@@ -404,13 +427,23 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         scene.rootNode.addChildNode(wall)
         let led = SCNNode(geometry: SCNPlane(width: 12, height: 4.5))
         led.position = SCNVector3(0, 2.4, -13.9)
-        let lm = SCNMaterial()
-        lm.lightingModel = .constant
-        lm.diffuse.contents = Self.ledWallImage(top: UIColor(top), accent: UIColor(light))
-        lm.diffuse.intensity = 0.6
-        led.geometry?.materials = [lm]
+        led.geometry?.materials = [vjMaterial(aspect: 12 / 4.5)]
         scene.rootNode.addChildNode(led)
         ledWall = led
+        _ = top
+        for sx in [-1, 1] as [Float] {
+            let side = SCNNode(geometry: SCNPlane(width: 2.6, height: 4.4))
+            side.position = SCNVector3(sx * 6.4, 2.3, -8.5)
+            side.eulerAngles.y = -sx * 0.55
+            side.geometry?.materials = [vjMaterial(aspect: 2.6 / 4.4)]
+            scene.rootNode.addChildNode(side)
+            // 枠
+            let frame = SCNNode(geometry: SCNBox(width: 2.75, height: 4.55, length: 0.08, chamferRadius: 0.02))
+            let fm = SCNMaterial(); fm.diffuse.contents = UIColor(white: 0.04, alpha: 1); pbr(fm, rough: 0.6)
+            frame.geometry?.materials = [fm]
+            frame.position = SCNVector3(0, 0, -0.05)
+            side.addChildNode(frame)
+        }
         // トラス
         let trussM = SCNMaterial()
         trussM.diffuse.contents = UIColor(white: 0.25, alpha: 1)
@@ -598,7 +631,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private static func robotMaterial(_ m: SCNMaterial, _ n: String) {
         m.lightingModel = .physicallyBased
         if n.contains("chrome") { m.metalness.contents = 1.0; m.roughness.contents = 0.1 }
-        else if n.contains("white") { m.metalness.contents = 0.0; m.roughness.contents = 0.22; m.clearCoat.contents = 0.6; m.clearCoatRoughness.contents = 0.1 }
+        else if n.contains("white") { m.diffuse.contents = UIColor(white: 0.72, alpha: 1); m.metalness.contents = 0.0; m.roughness.contents = 0.3; m.clearCoat.contents = 0.5; m.clearCoatRoughness.contents = 0.12 }
         else if n.contains("orange") { m.metalness.contents = 0.25; m.roughness.contents = 0.38; m.clearCoat.contents = 0.4 }
         else if n.contains("glow") || n.contains("lamp") {
             let c: UIColor = n.contains("cyan") ? UIColor(red: 0.2, green: 0.85, blue: 1, alpha: 1)
@@ -906,6 +939,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             updateDecks(s)
             planHands(s)
         }
+        if prev?.currentID != s.currentID || prev?.vjMode != s.vjMode { updateVJTrack(s) }
         if prev?.energy != s.energy { updateMeters(s.energy) }
     }
 
@@ -1192,7 +1226,158 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             h.opacity = CGFloat(0.08 + e * 0.18 + sin(t * 0.3 + Float(k)) * 0.03)
             h.position.x = sin(t * 0.07 + Float(k) * 2) * 1.2
         }
-        ledWall?.geometry?.firstMaterial?.diffuse.intensity = CGFloat(0.35 + e * 0.9 + (legend ? sin(t * 10) * 0.3 : 0))
+        updateVJ(t: t, energy: energy, legend: legend)
+    }
+
+    // MARK: VJ
+
+    /// GPU で映像を描く素材。種類・速さ・色は uniform で変える
+    private func vjMaterial(aspect: Float) -> SCNMaterial {
+        let m = SCNMaterial()
+        m.lightingModel = .constant
+        m.isDoubleSided = false
+        m.shaderModifiers = [.surface: Self.vjShader]
+        m.setValue(NSNumber(value: aspect), forKey: "vjAspect")
+        m.setValue(NSNumber(value: 0), forKey: "vjTime")
+        m.setValue(NSNumber(value: 0.5), forKey: "vjEnergy")
+        m.setValue(NSNumber(value: 0), forKey: "vjMode")
+        m.setValue(NSNumber(value: 0), forKey: "vjCut")
+        m.setValue(NSNumber(value: 1), forKey: "vjOn")
+        m.setValue(NSValue(scnVector3: SCNVector3(1, 0.2, 0.6)), forKey: "vjColA")
+        m.setValue(NSValue(scnVector3: SCNVector3(0.2, 0.6, 1)), forKey: "vjColB")
+        m.setValue(SCNMaterialProperty(contents: UIColor.darkGray), forKey: "vjArt")
+        m.setValue(SCNMaterialProperty(contents: UIColor.black), forKey: "vjText")
+        vjMaterials.append(m)
+        return m
+    }
+
+    private static let vjShader = """
+    #pragma arguments
+    float vjAspect;
+    float vjTime;
+    float vjEnergy;
+    float vjMode;
+    float vjCut;
+    float vjOn;
+    float3 vjColA;
+    float3 vjColB;
+    texture2d<float> vjArt;
+    texture2d<float> vjText;
+    #pragma body
+    constexpr sampler smp(filter::linear, address::repeat);
+    float2 uv = _surface.diffuseTexcoord;
+    float t = vjTime;
+    float e = vjEnergy;
+    float2 p = uv * 2.0 - 1.0;
+    p.x *= vjAspect;
+    float3 col = float3(0.0);
+    int mode = int(vjMode + 0.5);
+    if (mode == 0) {
+        float r = length(p);
+        float a = atan2(p.y, p.x);
+        float rings = sin(9.0 / (r + 0.18) - t * (1.5 + 4.0 * e));
+        float spokes = 0.6 + 0.4 * sin(a * 8.0 + t * 0.7);
+        col = mix(vjColA, vjColB, 0.5 + 0.5 * sin(r * 5.0 - t)) * smoothstep(0.1, 0.95, rings * 0.5 + 0.5) * spokes;
+        col *= smoothstep(0.0, 0.25, r);
+    } else if (mode == 1) {
+        float r = length(p);
+        float a = atan2(p.y, p.x) + t * 0.15;
+        float seg = 6.2831853 / 8.0;
+        a = fmod(abs(a), seg);
+        a = abs(a - seg * 0.5);
+        float2 q = float2(cos(a), sin(a)) * r * (0.55 + 0.15 * sin(t * 0.6)) + 0.5;
+        col = vjArt.sample(smp, q).rgb * (0.7 + 0.5 * e);
+    } else if (mode == 2) {
+        float2 q = float2((uv.x - 0.5) * vjAspect * 0.5 + 0.5, uv.y);
+        float row = floor(uv.y * 36.0);
+        float glitch = step(0.94, fract(sin(row * 12.9898 + floor(t * 6.0)) * 43758.5453));
+        q.x += glitch * 0.06 * sin(t * 40.0);
+        float sh = 0.004 + 0.02 * e;
+        col = float3(vjArt.sample(smp, q + float2(sh, 0.0)).r, vjArt.sample(smp, q).g, vjArt.sample(smp, q - float2(sh, 0.0)).b);
+        col *= 0.8 + 0.2 * sin(uv.y * 700.0);
+        float inside = step(0.0, q.x) * step(q.x, 1.0);
+        col = mix(vjColA * 0.12, col, inside);
+    } else if (mode == 3) {
+        float v = sin(p.x * 3.0 + t) + sin(p.y * 4.0 - t * 1.3) + sin((p.x + p.y) * 2.5 + t * 0.7) + sin(length(p) * 5.0 - t * 2.0);
+        col = mix(vjColA, vjColB, 0.5 + 0.5 * sin(v * 1.8));
+        float2 g = abs(fract(p * 3.0 + float2(0.0, t * 0.4)) - 0.5);
+        col += smoothstep(0.46, 0.5, max(g.x, g.y)) * 0.5;
+    } else {
+        float2 q = float2(fract(uv.x * vjAspect / 4.0 + t * 0.06), uv.y);
+        float txt = vjText.sample(smp, q).r;
+        float bg = 0.12 + 0.08 * sin(uv.x * 30.0 + t * 2.0);
+        col = mix(vjColA * bg, mix(float3(1.0), vjColB, 0.3), txt);
+    }
+    col += vjCut;
+    col *= (0.45 + 0.95 * e) * vjOn;
+    _surface.diffuse = float4(col, 1.0);
+    """
+
+    /// 曲が変わったら絵・文字・色を入れ替え、AUTO なら映像の種類も切り替える
+    @MainActor
+    private func updateVJTrack(_ s: BoothState) {
+        vjOn = s.vjMode != .off
+        if s.vjMode == .auto {
+            vjAutoIndex = (vjAutoIndex + 1 + Int.random(in: 0..<3)) % 5
+            vjModeNow = Float(vjAutoIndex)
+        } else {
+            vjModeNow = s.vjMode.index
+        }
+        vjCutAt = vjTimeNow
+        guard let t = s.current else { return }
+        let art = art(for: t) ?? vinyl(nil)
+        let (a, b) = Self.palette(art)
+        let text = Self.typoImage("\(t.title.uppercased())  —  \(t.artist.uppercased())  ·  ")
+        for m in vjMaterials {
+            m.setValue(SCNMaterialProperty(contents: art), forKey: "vjArt")
+            m.setValue(SCNMaterialProperty(contents: text), forKey: "vjText")
+            m.setValue(NSValue(scnVector3: a), forKey: "vjColA")
+            m.setValue(NSValue(scnVector3: b), forKey: "vjColB")
+        }
+    }
+
+    private func updateVJ(t: Float, energy: Double, legend: Bool) {
+        vjTimeNow = t
+        let cut = max(0, 1 - (t - vjCutAt) * 3)
+        let flash: Float = legend && sin(t * 18) > 0.7 ? 0.5 : 0
+        for m in vjMaterials {
+            m.setValue(NSNumber(value: t), forKey: "vjTime")
+            m.setValue(NSNumber(value: Float(energy / 100)), forKey: "vjEnergy")
+            m.setValue(NSNumber(value: vjModeNow), forKey: "vjMode")
+            m.setValue(NSNumber(value: cut + flash), forKey: "vjCut")
+            m.setValue(NSNumber(value: vjOn ? 1 : 0.05), forKey: "vjOn")
+        }
+    }
+
+    /// ジャケットから色を2つ（いちばん鮮やかな色と明るい色）
+    private static func palette(_ img: UIImage) -> (SCNVector3, SCNVector3) {
+        let n = 8
+        var px = [UInt8](repeating: 0, count: n * n * 4)
+        guard let cs = CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(data: &px, width: n, height: n, bitsPerComponent: 8, bytesPerRow: n * 4, space: cs,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let cg = img.cgImage else { return (SCNVector3(1, 0.2, 0.6), SCNVector3(0.2, 0.6, 1)) }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: n, height: n))
+        var best = (sat: -1.0, c: SCNVector3(1, 0.2, 0.6)), bright = (v: -1.0, c: SCNVector3(0.2, 0.6, 1))
+        for i in 0..<(n * n) {
+            let r = Double(px[i * 4]) / 255, g = Double(px[i * 4 + 1]) / 255, b = Double(px[i * 4 + 2]) / 255
+            let mx = max(r, g, b), mn = min(r, g, b)
+            let sat = mx > 0 ? (mx - mn) / mx * mx : 0
+            if sat > best.sat { best = (sat, SCNVector3(Float(r / mx), Float(g / mx), Float(b / mx))) }
+            if mx > bright.v && (mx - mn) > 0.15 { bright = (mx, SCNVector3(Float(r), Float(g), Float(b))) }
+        }
+        return (best.c, bright.c)
+    }
+
+    private static func typoImage(_ s: String) -> UIImage {
+        let w: CGFloat = 1024, h: CGFloat = 256
+        return UIGraphicsImageRenderer(size: CGSize(width: w, height: h)).image { _ in
+            UIColor.black.setFill()
+            UIRectFill(CGRect(x: 0, y: 0, width: w, height: h))
+            let str = NSAttributedString(string: s + s, attributes: [
+                .font: UIFont.systemFont(ofSize: 150, weight: .black), .foregroundColor: UIColor.white])
+            str.draw(at: CGPoint(x: 0, y: 40))
+        }
     }
 
     // MARK: テクスチャ

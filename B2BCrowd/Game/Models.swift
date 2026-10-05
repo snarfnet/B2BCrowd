@@ -200,6 +200,34 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
 
 // MARK: - Session config / score
 
+// VJ の映像の種類（音は解析しない。曲の情報と ENERGY だけで動く）
+enum VJMode: String, CaseIterable, Identifiable, Codable {
+    case auto, tunnel, kaleido, artwork, plasma, typo, off
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .auto: return "AUTO"
+        case .tunnel: return "TUNNEL"
+        case .kaleido: return "KALEIDO"
+        case .artwork: return "ARTWORK"
+        case .plasma: return "PLASMA"
+        case .typo: return "TYPO"
+        case .off: return "OFF"
+        }
+    }
+    /// シェーダーでの番号
+    var index: Float {
+        switch self {
+        case .tunnel: return 0
+        case .kaleido: return 1
+        case .artwork: return 2
+        case .plasma: return 3
+        case .typo: return 4
+        default: return 0
+        }
+    }
+}
+
 // DJ として選べるキャラ（3D モデル名と表示名）
 struct DJCharacter: Identifiable, Hashable {
     let id: String
@@ -225,6 +253,7 @@ struct DJCharacter: Identifiable, Hashable {
 struct SessionConfig: Codable {
     var djNames: [String] = ["DJ A", "DJ B"]
     var characters: [String] = ["c09", "c02"]
+    var vjMode: VJMode = .auto
     var mode: GameMode = .free
     var genreID: String = "TECHNO"
     var theme: String = Themes.all[0]
