@@ -321,7 +321,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         buildVenue()
         buildLights()
         // 機材と人物は重いので裏で読み込み、できたらまとめて足す（画面が固まらないように）
-        DispatchQueue.global(qos: .userInitiated).async { [self] in
+        Self.buildQueue.async { [self] in
             buildGear()
             let root = SCNNode()
             let crowd = buildCrowd(into: root)
@@ -342,11 +342,14 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
     }
 
+    /// 読み込みと組み立ては必ずこの1本の列で行う（同じ型紙を同時に複製すると SceneKit が落ちる）
+    static let buildQueue = DispatchQueue(label: "club.build", qos: .userInitiated)
+
     static let nearNames = ["c01", "c02", "c03", "c05", "c06", "c09", "c12", "c16"]
 
     /// アプリ起動時に人物を先に読んでおく（起動の邪魔をしないよう少し待ってから）
     static func preload() {
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1.5) {
+        buildQueue.asyncAfter(deadline: .now() + 1.5) {
             for n in nearNames { _ = template(n, lod: false) }
             for i in 1...18 { _ = template(String(format: "c%02d", i), lod: true) }
         }
