@@ -31,6 +31,18 @@ def keep_arm_only(o):
         if w_all == 0 or w_keep / w_all < 0.5:
             kill.append(v)
     bmesh.ops.delete(bm, geom=kill, context="VERTS")
+    # 残した頂点から肩・背骨などへの重みを外し、腕と手の骨だけで正規化（引き伸ばし防止）
+    if dl:
+        for v in bm.verts:
+            dv = v[dl]
+            for gi in list(dv.keys()):
+                n = names.get(gi, "")
+                if not (n.startswith("mixamorig") and any(k in n for k in KEEP)):
+                    del dv[gi]
+            tot = sum(dv.values())
+            if tot > 0:
+                for gi in list(dv.keys()):
+                    dv[gi] = dv[gi] / tot
     bm.to_mesh(o.data); bm.free()
     return len(o.data.polygons)
 

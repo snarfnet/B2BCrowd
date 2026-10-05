@@ -280,21 +280,21 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     private func build() {
         let cam = SCNCamera()
-        cam.fieldOfView = 64
+        cam.fieldOfView = 60
         cam.zNear = 0.02
         cam.zFar = 60
         cam.wantsHDR = true
-        cam.bloomIntensity = 1.1
-        cam.bloomThreshold = 0.75
+        cam.bloomIntensity = 0.8
+        cam.bloomThreshold = 0.92
         cam.bloomBlurRadius = 10
         cam.vignettingIntensity = 0.5
         cam.vignettingPower = 1.2
         cam.screenSpaceAmbientOcclusionIntensity = 0.7
-        cam.exposureOffset = 0.2
+        cam.exposureOffset = -0.1
         cam.saturation = 1.08
         cameraNode.camera = cam
-        cameraNode.position = SCNVector3(0, 0.78, 1.0)
-        cameraNode.look(at: SCNVector3(0, -0.2, -1.6))
+        cameraNode.position = SCNVector3(0, 0.95, 1.2)
+        cameraNode.look(at: SCNVector3(0, -0.25, -2.4))
         scene.rootNode.addChildNode(cameraNode)
 
         scene.lightingEnvironment.contents = Self.environmentImage(venue)
@@ -499,7 +499,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         for i in 0..<count {
             var pos = SIMD2<Float>(0, 0)
             for _ in 0..<30 {
-                let depth: Float = 1.55 + powf(rnd(), 0.8) * 7.5
+                let depth: Float = 2.2 + powf(rnd(), 0.8) * 7.0
                 let half: Float = 1.3 + (depth - 1.5) * 0.45
                 pos = SIMD2((rnd() * 2 - 1) * half, -depth)
                 if placed.allSatisfy({ simd_distance($0, pos) > 0.55 }) { break }
@@ -563,7 +563,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let key = SCNNode()
         key.light = SCNLight()
         key.light?.type = .spot
-        key.light?.intensity = 1300
+        key.light?.intensity = 650
         key.light?.color = UIColor(red: 1, green: 0.92, blue: 0.82, alpha: 1)
         key.light?.spotInnerAngle = 30
         key.light?.spotOuterAngle = 70
