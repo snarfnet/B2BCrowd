@@ -58,6 +58,7 @@ jobs:
         sleep 20; shot 05_later
         sleep 25; shot 06_hot
         sleep 30; shot 07_hotter
+        run session -vjcam; sleep 14; shot 11_vj
         run session -boothcam; sleep 12; shot 09_booth_a
         sleep 15; shot 10_booth_b
         run result; sleep 125; shot 08_result

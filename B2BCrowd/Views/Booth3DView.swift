@@ -261,8 +261,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     private var people: [Person] = []
     private var arms: [[ArmRig]] = []        // [DJ][外側, 内側]
-    private var gestures: [[Gesture]] = [[.idle, .idle], [.idle, .idle]]
-    private var targets: [[SIMD3<Float>]] = [[SIMD3(-0.59, 0, 0.3), SIMD3(-0.33, 0, 0.3)], [SIMD3(0.59, 0, 0.3), SIMD3(0.33, 0, 0.3)]]
+    private var gestures: [[Gesture]] = [[.idle, .idle], [.idle, .idle], [.tap(1.2), .twist]]
+    private var targets: [[SIMD3<Float>]] = [[SIMD3(-0.59, 0, 0.3), SIMD3(-0.33, 0, 0.3)], [SIMD3(0.59, 0, 0.3), SIMD3(0.33, 0, 0.3)],
+                                             [SIMD3(-2.75, 0.24, -3.2), SIMD3(-2.4, 0.24, -3.18)]]
     private var faderGoal: [Float] = [1, 0]
     private var xGoal: Float = -1
 
@@ -272,6 +273,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var confetti: SCNParticleSystem?
     private var ledWall: SCNNode?
     private var hazes: [SCNNode] = []
+    // VJ 卓（フロア左手前の台の上）
+    private let vjDesk = SIMD3<Float>(-2.6, 0.22, -3.25)   // 卓の天板の中心
+    private var laptopMat: SCNMaterial?
     // VJ
     private var vjMaterials: [SCNMaterial] = []
     private var vjModeNow: Float = 0
@@ -324,6 +328,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             cameraNode.position = SCNVector3(0.1, 0.95, 1.1)
             cameraNode.look(at: SCNVector3(0, 0, -0.1))
         }
+        if ProcessInfo.processInfo.arguments.contains("-vjcam") {   // VJ 卓の確認用
+            cameraNode.position = SCNVector3(-1.4, 1.2, -1.4)
+            cameraNode.look(at: SCNVector3(-2.6, 0.1, -3.3))
+        }
         camBase = cameraNode.simdOrientation
         scene.rootNode.addChildNode(cameraNode)
 
@@ -349,6 +357,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 lock.lock()
                 people = crowd + djs
                 arms = rigs
+                let d = vjDesk
+                if targets.count < 3 { targets.append([]) }
+                targets[2] = [SIMD3(d.x - 0.15, d.y + 0.02, d.z + 0.06), SIMD3(d.x + 0.2, d.y + 0.03, d.z + 0.05)]
                 ready = true
                 lock.unlock()
                 if let s = lastApplied {
@@ -431,6 +442,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         scene.rootNode.addChildNode(led)
         ledWall = led
         _ = top
+        laptopMat = vjMaterial(aspect: 1.6)
         for sx in [-1, 1] as [Float] {
             let side = SCNNode(geometry: SCNPlane(width: 2.6, height: 4.4))
             side.position = SCNVector3(sx * 6.4, 2.3, -8.5)
@@ -780,6 +792,70 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         for d in 0..<arms.count {
             for k in 0..<arms[d].count { arms[d][k].tip = restTip(d, outer: k == 0) }
         }
+        // VJ：DJ と重ならない人を選び、左の台でノート PC とコントローラーを操作
+        let vjName = ["c13", "c16", "c05", "c12"].first { !characters.contains($0) } ?? "c13"
+        let desk = vjDesk
+        let deskM = SCNMaterial(); deskM.diffuse.contents = UIColor(white: 0.05, alpha: 1); pbr(deskM, rough: 0.55)
+        let riser = SCNNode(geometry: SCNBox(width: 1.6, height: 0.3, length: 1.4, chamferRadius: 0.01))
+        riser.geometry?.materials = [deskM]
+        riser.simdPosition = SIMD3(desk.x, -0.87, desk.z + 0.35)
+        parent.addChildNode(riser)
+        let table = SCNNode(geometry: SCNBox(width: 0.9, height: 0.92, length: 0.5, chamferRadius: 0.01))
+        table.geometry?.materials = [deskM]
+        table.simdPosition = SIMD3(desk.x, desk.y - 0.46, desk.z)
+        parent.addChildNode(table)
+        let alu = SCNMaterial(); alu.diffuse.contents = UIColor(white: 0.7, alpha: 1); pbr(alu, rough: 0.3, metal: 1)
+        let base = SCNNode(geometry: SCNBox(width: 0.34, height: 0.015, length: 0.23, chamferRadius: 0.005))
+        base.geometry?.materials = [alu]
+        base.simdPosition = SIMD3(desk.x - 0.12, desk.y + 0.008, desk.z + 0.02)
+        parent.addChildNode(base)
+        let lid = SCNNode(geometry: SCNBox(width: 0.34, height: 0.22, length: 0.01, chamferRadius: 0.005))
+        lid.geometry?.materials = [alu]
+        lid.simdPosition = SIMD3(desk.x - 0.12, desk.y + 0.115, desk.z - 0.1)
+        lid.eulerAngles.x = -0.25
+        parent.addChildNode(lid)
+        if let lm = laptopMat {
+            // 画面は VJ 側（+z）を向く
+            let screen = SCNNode(geometry: SCNPlane(width: 0.31, height: 0.19))
+            screen.geometry?.materials = [lm]
+            screen.position = SCNVector3(0, 0, 0.0055)
+            lid.addChildNode(screen)
+        }
+        let ctrl = SCNNode(geometry: SCNBox(width: 0.2, height: 0.03, length: 0.14, chamferRadius: 0.006))
+        ctrl.geometry?.materials = [deskM]
+        ctrl.simdPosition = SIMD3(desk.x + 0.2, desk.y + 0.015, desk.z + 0.03)
+        parent.addChildNode(ctrl)
+        for i in 0..<8 {
+            let pad = SCNNode(geometry: SCNBox(width: 0.035, height: 0.008, length: 0.035, chamferRadius: 0.004))
+            let pm = SCNMaterial(); pm.lightingModel = .constant
+            pm.diffuse.contents = UIColor(hue: CGFloat(i) / 8, saturation: 0.9, brightness: 1, alpha: 1)
+            pad.geometry?.materials = [pm]
+            pad.simdPosition = SIMD3(Float(i % 4) * 0.045 - 0.0675, 0.018, Float(i / 4) * 0.045 - 0.022)
+            ctrl.addChildNode(pad)
+        }
+        if let t = loadCharacter(vjName) {
+            let vj = cloneSkinned(t)
+            vj.simdPosition = SIMD3(desk.x - 0.05, -0.72, desk.z + 0.5)
+            vj.eulerAngles.y = .pi
+            parent.addChildNode(vj)
+            let p = Person(root: vj, phase: 3.3, speed: 1, bias: 0, special: 6, phoneUser: false)
+            for b in boneNames {
+                let key = "mixamorig:\(b)"
+                guard let bn = vj.childNode(withName: key, recursively: true)
+                        ?? vj.childNode(withName: "rig_mixamorig_\(b)", recursively: true) else { continue }
+                p.bones.append((bn, key, bn.simdOrientation))
+                if b == "Hips" { p.hips = bn; p.hipsBind = bn.simdPosition }
+            }
+            people.append(p)
+            // 観客側を向いているので、左手がノート PC（-x）、右手がコントローラー（+x）
+            let left = ArmRig(model: vj, prefix: "Left", side: -1)
+            let right = ArmRig(model: vj, prefix: "Right", side: 1)
+            if let left, let right {
+                left.tip = SIMD3(desk.x - 0.15, desk.y + 0.02, desk.z + 0.06)
+                right.tip = SIMD3(desk.x + 0.2, desk.y + 0.03, desk.z + 0.05)
+                arms.append([left, right])
+            }
+        }
         return (people, arms)
     }
 
@@ -795,7 +871,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let key = SCNNode()
         key.light = SCNLight()
         key.light?.type = .spot
-        key.light?.intensity = 300
+        key.light?.intensity = 170
         key.light?.color = UIColor(red: 1, green: 0.92, blue: 0.82, alpha: 1)
         key.light?.spotInnerAngle = 30
         key.light?.spotOuterAngle = 70
@@ -1000,6 +1076,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let live = isLive(s.phase)
         var newTargets = targets
         var newGestures = gestures
+        if newTargets.count < 3 { newTargets.append(targets.last ?? []) }
+        if newGestures.count < 3 { newGestures.append([.tap(1.2), .twist]) }
         for d in 0..<2 {
             let isOwner = s.owner == d && s.current != nil
             let isSel = s.selector == d
@@ -1039,6 +1117,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         // フェーダー：流れている側が上がる。切り替え中は次の人の側へ
         let mixTo = s.phase == .transition ? s.selector : s.owner
         let liveOwner = isLive(s.phase) ? s.owner : -1
+        newTargets[2] = targets[2]
+        newGestures[2] = gestures[2]
         lock.lock()
         targets = newTargets
         gestures = newGestures
