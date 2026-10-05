@@ -24,8 +24,7 @@ jobs:
       env:
         AUDIUS_API_KEY: ${{ secrets.AUDIUS_API_KEY }}
       run: |
-        if [ -n "$AUDIUS_API_KEY" ]; then printf 'AUDIUS_API_KEY = %s
-' "$AUDIUS_API_KEY" > Config/Secrets.xcconfig; fi
+        if [ -n "$AUDIUS_API_KEY" ]; then echo "AUDIUS_API_KEY = $AUDIUS_API_KEY" > Config/Secrets.xcconfig; fi
 
     - name: Generate Xcode project
       run: xcodegen generate
