@@ -34,3 +34,34 @@ jobs:
           -derivedDataPath build/sim \
           CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" || true
         grep -q "BUILD SUCCEEDED" build.log
+
+    - name: Run in Simulator and capture screenshots
+      run: |
+        set -x
+        UDID=$(xcrun simctl list devices available -j | python3 -c "
+        import json,sys
+        d=json.load(sys.stdin)['devices']
+        c=[x for k,v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone') and 'Pro' in x['name'] and 'Max' not in x['name']]
+        print(c[-1]['udid'])")
+        xcrun simctl boot "$UDID"
+        xcrun simctl bootstatus "$UDID" -b
+        APP=build/sim/Build/Products/Debug-iphonesimulator/B2BCrowd.app
+        xcrun simctl install "$UDID" "$APP"
+        mkdir -p shots
+        shot() { xcrun simctl io "$UDID" screenshot "shots/$1.png"; }
+        run() { xcrun simctl terminate "$UDID" com.tokyonasu.B2BCrowd || true; xcrun simctl launch "$UDID" com.tokyonasu.B2BCrowd -AppleLanguages "(ja)" -shot "$1"; }
+        run title; sleep 6; shot 01_title
+        run lobby; sleep 4; shot 02_lobby
+        run session; sleep 5; shot 03_transition
+        sleep 8; shot 04_playing
+        sleep 20; shot 05_later
+        sleep 25; shot 06_hot
+        sleep 30; shot 07_hotter
+        run result; sleep 125; shot 08_result
+        xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "B2BCrowd"' --style compact > shots/app.log 2>&1 || true
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: shots
+        path: shots/

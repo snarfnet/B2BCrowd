@@ -181,7 +181,22 @@ final class GameEngine {
 
     // MARK: 進行
 
+    /// 動作確認・スクショ用。デモ曲を自動で選び、観客も自動で反応する。
+    var autopilot = false
+
+    private func autopilotStep() {
+        if next == nil, phase != .transition, phase != .paused, phase != .result,
+           phase == .searchingTrack || phase == .waitingForNextDJ || selectionElapsed > 4 {
+            if let t = DemoCatalog.tracks.filter({ !playedIDs.contains($0.id) }).randomElement() { reserve(t) }
+        }
+        guard phase == .playing || phase == .countdown else { return }
+        if Int.random(in: 0..<5) == 0 { react([Reaction.fire, .heart, .clap].randomElement()!) }
+        if needsJudge, trackElapsed > 3 { judge(true) }
+        if !likedThisRound, trackElapsed > 5 { like() }
+    }
+
     func tick(_ dt: TimeInterval) {
+        if autopilot { autopilotStep() }
         switch phase {
         case .playing, .countdown:
             if player.isInterrupted {

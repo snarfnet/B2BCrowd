@@ -15,7 +15,10 @@ struct B2BCrowdApp: App {
                 .environment(app.music)
                 .environment(app.profiles)
                 .preferredColorScheme(.dark)
-                .task { await app.music.refresh() }
+                .task {
+                    await app.music.refresh()
+                    app.runShotScene()
+                }
         }
     }
 }
@@ -46,6 +49,31 @@ final class AppModel {
     func finish(_ engine: GameEngine) {
         unlocked = profiles.record(engine)
         screen = .result(engine)
+    }
+
+    /// 起動引数 `-shot <scene>` で決まった画面から始める（動作確認・スクショ用）
+    func runShotScene() {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-shot"), i + 1 < args.count else { return }
+        music.demoMode = true
+        switch args[i + 1] {
+        case "lobby":
+            screen = .lobby
+        case "session", "result":
+            var c = SessionConfig()
+            c.djNames = ["DJ KAORI", "DJ NEON"]
+            c.mode = args[i + 1] == "result" ? .free : .timeAttack
+            c.length = args[i + 1] == "result" ? 3 : 20
+            c.playLimit = 30
+            c.crowd = .mix
+            c.venue = .tokyoNight
+            config = c
+            let engine = GameEngine(config: c, player: music.player)
+            engine.autopilot = true
+            screen = .session(engine)
+        default:
+            break
+        }
     }
 
     private static let configKey = "sessionConfig.v1"
