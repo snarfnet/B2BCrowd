@@ -50,6 +50,8 @@ struct CrowdView: View {
     let venue: Venue
     let reactions: [FloatEvent]
     let active: Bool
+    /// 手前に 3D ブースを重ねるときは観客を上に詰め、2D のブースは描かない
+    var behindBooth = false
 
     @State private var crowd: [Clubber] = []
 
@@ -62,7 +64,7 @@ struct CrowdView: View {
                 for c in crowd { drawClubber(&g, size, c, t) }
                 drawEffects(&g, size, t)
                 drawReactions(&g, size, ctx.date)
-                drawBooth(&g, size, t)
+                if !behindBooth { drawBooth(&g, size, t) }
             }
         }
         .onAppear { crowd = Clubber.crowd(for: venue) }
@@ -122,7 +124,8 @@ struct CrowdView: View {
             g.fill(truss, with: .color(.gray.opacity(0.5)))
         }
         // 床
-        g.fill(Path(CGRect(x: 0, y: s.height * 0.42, width: s.width, height: s.height * 0.58)),
+        let floorY: CGFloat = behindBooth ? 0.36 : 0.42
+        g.fill(Path(CGRect(x: 0, y: s.height * floorY, width: s.width, height: s.height * (1 - floorY))),
                with: .linearGradient(Gradient(colors: [light.opacity(0.08 + energy / 900), .black.opacity(0.6)]),
                                      startPoint: CGPoint(x: 0, y: s.height * 0.42), endPoint: CGPoint(x: 0, y: s.height)))
     }
@@ -181,8 +184,8 @@ struct CrowdView: View {
     private func drawClubber(_ g: inout GraphicsContext, _ s: CGSize, _ c: Clubber, _ t: Double) {
         if c.special == .legend, energy < 81 { return }   // 伝説のクラバーは INSANE から現れる
 
-        let rows: [CGFloat] = [0.52, 0.64, 0.77, 0.92]
-        let scales: [CGFloat] = [0.55, 0.68, 0.83, 1.0]
+        let rows: [CGFloat] = behindBooth ? [0.40, 0.47, 0.55, 0.63] : [0.52, 0.64, 0.77, 0.92]
+        let scales: [CGFloat] = behindBooth ? [0.42, 0.5, 0.6, 0.72] : [0.55, 0.68, 0.83, 1.0]
         let sc = scales[c.row] * min(1.4, s.height / 260)
         let tierN = personalTier(c)
 
@@ -366,7 +369,7 @@ struct CrowdView: View {
             guard age < 2.5 else { continue }
             let seed = abs(r.id.hashValue % 1000)
             let x = CGFloat(seed) / 1000 * s.width * 0.8 + s.width * 0.1
-            let y = s.height * 0.75 - CGFloat(age) * s.height * 0.28
+            let y = s.height * (behindBooth ? 0.55 : 0.75) - CGFloat(age) * s.height * 0.28
             var gg = g
             gg.opacity = max(0, 1 - age / 2.5)
             gg.draw(Text(r.text).font(.system(size: 26)), at: CGPoint(x: x, y: y))

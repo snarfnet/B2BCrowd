@@ -72,14 +72,28 @@ struct SessionView: View {
     // MARK: フロア
 
     private var floor: some View {
-        CrowdView(energy: game.energy, venue: game.config.venue, reactions: game.reactions,
-                  active: game.phase != .paused)
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                CrowdView(energy: game.energy, venue: game.config.venue, reactions: game.reactions,
+                          active: game.phase != .paused, behindBooth: true)
+                Booth3DView(state: boothState)
+                    .frame(height: geo.size.height * 0.62)
+            }
+        }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 200, maxHeight: 300)
+            .frame(minHeight: 280, maxHeight: 380)
+            .layoutPriority(1)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(alignment: .topTrailing) { eventFeed }
             .overlay { bannerView }
             .padding(.horizontal)
+    }
+
+    private var boothState: BoothState {
+        BoothState(owner: game.currentOwner, currentID: game.current?.id, nextID: game.next?.id,
+                   nextHidden: game.config.isSecret && game.phase != .transition, phase: game.phase,
+                   selector: game.selector, energy: Int(game.energy.rounded()), venue: game.config.venue,
+                   current: game.current, next: game.next)
     }
 
     private var eventFeed: some View {
@@ -125,8 +139,9 @@ struct SessionView: View {
 
     private var nowPlaying: some View {
         HStack(spacing: 14) {
-            RecordView(track: game.current, spinning: game.phase == .playing || game.phase == .countdown)
-                .frame(width: 92, height: 92)
+            ArtworkView(track: game.current)
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) {
                 Text("NOW · \(game.current == nil ? "—" : game.name(game.currentOwner))")
                     .font(.system(size: 11, weight: .heavy, design: .monospaced))
