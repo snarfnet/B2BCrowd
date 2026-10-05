@@ -265,6 +265,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var hazes: [SCNNode] = []
 
     private var lastTime: TimeInterval = 0
+    private var ready = false   // 機材と人物の読み込みが終わったら true
     private var camBase = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
     private var smoke: SCNParticleSystem?
     private var artCache: [String: UIImage] = [:]
@@ -318,20 +319,25 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         scene.fogDensityExponent = 1.4
 
         buildVenue()
-        buildGear()
         buildLights()
-        // 人物は重いので裏で読み込み、できたらまとめて足す（画面が固まらないように）
+        // 機材と人物は重いので裏で読み込み、できたらまとめて足す（画面が固まらないように）
         DispatchQueue.global(qos: .userInitiated).async { [self] in
+            buildGear()
             let root = SCNNode()
             let crowd = buildCrowd(into: root)
             let (djs, rigs) = buildArms(into: root)
-            lock.lock()
-            people = crowd + djs
-            arms = rigs
-            lock.unlock()
             DispatchQueue.main.async { [self] in
+                scene.rootNode.addChildNode(gear)
                 scene.rootNode.addChildNode(root)
-                if let s = lastApplied { planHands(s) }
+                lock.lock()
+                people = crowd + djs
+                arms = rigs
+                ready = true
+                lock.unlock()
+                if let s = lastApplied {
+                    lastApplied = nil
+                    apply(s)
+                }
             }
         }
     }
@@ -440,7 +446,6 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private func buildGear() {
         guard let s = SCNScene(named: "Booth.scnassets/gear.dae") else { return }
         for c in s.rootNode.childNodes { gear.addChildNode(c) }
-        scene.rootNode.addChildNode(gear)
 
         // 素材を PBR に
         gear.enumerateHierarchy { node, _ in
@@ -507,7 +512,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             l.light?.spotOuterAngle = 75
             l.light?.attenuationEndDistance = 1.2
             l.simdPosition = head.simdWorldPosition
-            scene.rootNode.addChildNode(l)
+            gear.addChildNode(l)
             l.look(at: SCNVector3(0, 0.06, -0.02))
         }
         if let led = find("booth_led") {
@@ -843,9 +848,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     @MainActor
     func apply(_ s: BoothState) {
+        lock.lock(); st = s; let isReady = ready; lock.unlock()
+        guard isReady else { lastApplied = s; return }
         let prev = lastApplied
         lastApplied = s
-        lock.lock(); st = s; lock.unlock()
 
         let poseChanged = prev == nil || prev!.owner != s.owner || prev!.currentID != s.currentID
             || prev!.nextID != s.nextID || prev!.phase != s.phase || prev!.selector != s.selector
@@ -969,8 +975,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         lock.lock()
         let s = st
         let tg = targets, gs = gestures, fg = faderGoal, xg = xGoal
-        let crowd = people, rigs = arms
+        let crowd = people, rigs = arms, isReady = ready
         lock.unlock()
+        guard isReady else { return }
         let t = Float(time.truncatingRemainder(dividingBy: 10000))
         let energy = Double(s.energy)
 
