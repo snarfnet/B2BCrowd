@@ -4,7 +4,7 @@
 import sys, os, bpy, json, math
 from mathutils import Vector, Matrix, Quaternion
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import mh_common as mh
+# MakeHuman is needed only for the optional fresh-reference path.
 import mocap
 MOCAP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mocap")
 # 名前: (BVH, 開始秒, 長さ秒)
@@ -133,8 +133,33 @@ def side_ref(rig):
         _side_local[n] = bones[P + n].matrix_local.to_3x3().inverted() @ side
     return _side_local
 
+_forward_local = {}
+
+def forward_ref(rig):
+    # Collada joint axes need not point towards the next joint. Derive each
+    # physical segment from rest positions rather than assuming its Y axis.
+    key = rig.as_pointer()
+    if key in _forward_local:
+        return _forward_local[key]
+    children = {"Spine": "Spine1", "Spine1": "Spine2", "Spine2": "Neck", "Neck": "Head"}
+    for side in ("Left", "Right"):
+        children.update({side + "Shoulder": side + "Arm", side + "Arm": side + "ForeArm",
+                         side + "ForeArm": side + "Hand", side + "Hand": side + "HandMiddle1",
+                         side + "UpLeg": side + "Leg", side + "Leg": side + "Foot",
+                         side + "Foot": side + "ToeBase"})
+    bones = rig.data.bones
+    result = {}
+    for n in ORDER:
+        b = bones[P + n]
+        child = bones.get(P + children.get(n, ""))
+        direction = child.head_local - b.head_local if child else Vector((0, 0, 1))
+        result[n] = b.matrix_local.to_3x3().inverted() @ direction.normalized()
+    _forward_local[key] = result
+    return result
+
 def solve(rig, pose):
     sides = side_ref(rig)
+    forwards = forward_ref(rig)
     for n in ORDER:
         pb = rig.pose.bones[P + n]
         pb.rotation_mode = "QUATERNION"
@@ -148,7 +173,7 @@ def solve(rig, pose):
             continue
         pb = rig.pose.bones[P + n]
         M = pb.matrix.copy()
-        y = M.to_3x3().col[1].normalized()
+        y = (M.to_3x3() @ forwards[n]).normalized()
         q = y.rotation_difference(pose[n])
         R = q.to_matrix() @ M.to_3x3()
         key = "__side_" + n
@@ -176,11 +201,24 @@ def sample(keys, t):
             return lerp_pose(p0, p1, u), hip
     return keys[-1][1], keys[-1][2]
 
-def build(out_path, preview_dir=None):
-    mh.clear(); mh.ensure_pack()
-    body = mh.make_human("ref", {"gender": 0.5}, "young_caucasian_male", ["male_casualsuit02"], hair="", eyebrows="", proxy="male_generic")
-    rig = body.parent
-    data = {"fps": FPS, "clips": {}}
+def build(out_path, preview_dir=None, rig_dae=None):
+    if rig_dae:
+        from dae_reference import load_rig
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        rig = load_rig(rig_dae, meshes=bool(preview_dir))
+    else:
+        import mh_common as mh
+        mh.clear(); mh.ensure_pack()
+        body = mh.make_human("ref", {"gender": 0.5}, "young_caucasian_male", ["male_casualsuit02"], hair="", eyebrows="", proxy="male_generic")
+        rig = body.parent
+    # Clip deltas use bone-local coordinates. Include their rest frames so
+    # the app can retarget different body proportions without sideways hips.
+    to_scn = Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))
+    rest = {}
+    for b in ORDER:
+        q = (to_scn @ rig.data.bones[P + b].matrix_local.to_3x3()).to_quaternion().normalized()
+        rest[P + b] = [round(v, 6) for v in (q.x, q.y, q.z, q.w)]
+    data = {"fps": FPS, "rest": rest, "clips": {}}
     for name, fn in CLIPS.items():
         dur, keys = fn()
         n = int(round(dur * FPS))
@@ -194,6 +232,13 @@ def build(out_path, preview_dir=None):
                 bones[P + b] += [round(x, 4), round(y, 4), round(z, 4), round(w, 4)]
             hips += [round(v, 4) for v in hip]
         data["clips"][name] = {"frames": n, "bones": bones, "hips": hips}
+        if preview_dir:
+            pose, hip = sample(keys, dur / 2)
+            solve(rig, pose)
+            mh_preview_pose(rig, os.path.join(preview_dir, f"clip_{name}.png"), hip)
+            pose, hip = sample(keys, 0)
+            solve(rig, pose)
+            mh_preview_pose(rig, os.path.join(preview_dir, f"clip_{name}_0.png"), hip)
     for name, (bvh, st, ln) in MOCAP.items():
         frames = mocap.clip(os.path.join(MOCAP_DIR, bvh), st, ln, fps=FPS)
         bones = {P + b: [] for b in ORDER}
@@ -217,13 +262,6 @@ def build(out_path, preview_dir=None):
                 pose["Hips"] = Vector(fr["hip_up"]); pose["__side_Hips"] = Vector(fr["hip_side"]); pose["__side_Spine2"] = Vector(fr["chest_side"])
                 solve(rig, pose)
                 mh_preview_pose(rig, os.path.join(preview_dir, f"mc_{name}_{int(q * 100)}.png"), tuple(fr["hips"]))
-        if preview_dir:
-            pose, hip = sample(keys, dur / 2)
-            solve(rig, pose)
-            mh_preview_pose(rig, os.path.join(preview_dir, f"clip_{name}.png"), hip)
-            pose, hip = sample(keys, 0)
-            solve(rig, pose)
-            mh_preview_pose(rig, os.path.join(preview_dir, f"clip_{name}_0.png"), hip)
     json.dump(data, open(out_path, "w"), separators=(",", ":"))
     print("WROTE", out_path, os.path.getsize(out_path))
 
@@ -251,4 +289,5 @@ def mh_preview_pose(rig, path, hip):
 if __name__ == "__main__":
     out = sys.argv[sys.argv.index("--out") + 1]
     prev = sys.argv[sys.argv.index("--preview") + 1] if "--preview" in sys.argv else None
-    build(out, prev)
+    rig_dae = sys.argv[sys.argv.index("--rig-dae") + 1] if "--rig-dae" in sys.argv else None
+    build(out, prev, rig_dae)

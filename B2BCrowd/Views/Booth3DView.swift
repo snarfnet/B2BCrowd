@@ -67,11 +67,29 @@ struct CrowdClip {
 
 enum CrowdClips {
     static let fps: Float = 30
-    static let all: [String: CrowdClip] = {
+    private static let source: [String: Any] = {
         guard let url = Bundle.main.url(forResource: "crowd_clips", withExtension: "json"),
               let data = try? Data(contentsOf: url),
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let clips = root["clips"] as? [String: [String: Any]] else { return [:] }
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
+        return root
+    }()
+
+    static let bindOrientations: [String: simd_quatf] = {
+        var result: [String: simd_quatf] = [:]
+        for (name, q) in (source["rest"] as? [String: [Double]]) ?? [:] where q.count == 4 {
+            result[name] = simd_quatf(ix: Float(q[0]), iy: Float(q[1]), iz: Float(q[2]), r: Float(q[3])).normalized
+        }
+        return result
+    }()
+
+    static func space(for bone: SCNNode, in root: SCNNode, name: String) -> simd_quatf {
+        guard let reference = bindOrientations[name] else { return simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0)) }
+        let bind = root.simdWorldOrientation.inverse * bone.simdWorldOrientation
+        return bind.inverse * reference
+    }
+
+    static let all: [String: CrowdClip] = {
+        guard let clips = source["clips"] as? [String: [String: Any]] else { return [:] }
         var out: [String: CrowdClip] = [:]
         for (name, c) in clips {
             let frames = c["frames"] as? Int ?? 1
@@ -81,7 +99,8 @@ enum CrowdClips {
                 qs.reserveCapacity(frames)
                 var i = 0
                 while i + 3 < arr.count {
-                    qs.append(simd_quatf(ix: Float(arr[i]), iy: Float(arr[i + 1]), iz: Float(arr[i + 2]), r: Float(arr[i + 3])))
+                    let q = simd_quatf(ix: Float(arr[i]), iy: Float(arr[i + 1]), iz: Float(arr[i + 2]), r: Float(arr[i + 3]))
+                    qs.append(simd_length(q.vector) > 1e-5 ? q.normalized : simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0)))
                     i += 4
                 }
                 bones[b] = qs
@@ -102,7 +121,7 @@ enum CrowdClips {
 
 private final class Person {
     let root: SCNNode
-    var bones: [(node: SCNNode, name: String, bind: simd_quatf)] = []
+    var bones: [(node: SCNNode, name: String, bind: simd_quatf, space: simd_quatf)] = []
     var hips: SCNNode?
     var hipsBind = SIMD3<Float>(repeating: 0)
     var clip = "idle"
@@ -110,6 +129,7 @@ private final class Person {
     var blend: Float = 1
     var phase: Float
     var speed: Float
+    var clock: Float
     let bias: Double
     var phoneLight: SCNNode?
     let special: Int          // 0 普通 / 1 絶対踊らない / 2 辛口評論家 / 3 何でも盛り上がる / 4 ダンスキング / 5 伝説
@@ -119,6 +139,7 @@ private final class Person {
         self.root = root
         self.phase = phase
         self.speed = speed
+        self.clock = phase
         self.bias = bias
         self.special = special
         self.phoneUser = phoneUser
@@ -133,9 +154,10 @@ private final class ArmRig {
     let armDir0: SIMD3<Float>, foreDir0: SIMD3<Float>
     let l1: Float, l2: Float
     let handDir0: SIMD3<Float>, palm0: SIMD3<Float>
-    var fingers: [(node: SCNNode, bind: simd_quatf, axis: SIMD3<Float>, sign: Float, finger: Int)] = []
+    var fingers: [(node: SCNNode, bind: simd_quatf, axis: SIMD3<Float>, sign: Float, finger: Int, joint: Int)] = []
     var tip = SIMD3<Float>(0, 0, 0)
     var curl: [Float] = [0.5, 0.5, 0.5, 0.5, 0.3]   // 人差し指・中指・薬指・小指・親指
+    let handLength: Float
     let side: Float            // 画面右側の手なら +1、左側なら -1
 
     init?(model: SCNNode, prefix: String, side: Float) {
@@ -161,6 +183,11 @@ private final class ArmRig {
         // 親指の付け根は手のひら側にある
         if let th = n("HandThumb1"), simd_dot(th.simdWorldPosition - ph, palm) < 0 { palm = -palm }
         palm0 = palm
+        let indexLast = n("HandIndex3") ?? idx
+        let indexPrevious = n("HandIndex2") ?? idx
+        let fingertip = indexLast.childNodes.first?.simdWorldPosition
+            ?? (indexLast.simdWorldPosition + (indexLast.simdWorldPosition - indexPrevious.simdWorldPosition) * 0.75)
+        handLength = max(0.035, simd_length(fingertip - ph))
 
         let names = [("Index", 0), ("Middle", 1), ("Ring", 2), ("Pinky", 3), ("Thumb", 4)]
         for (fname, fi) in names {
@@ -173,7 +200,7 @@ private final class ArmRig {
                 let dirW = child.map { simd_normalize($0.simdWorldPosition - node.simdWorldPosition) } ?? handDir0
                 let turned = simd_quatf(angle: 0.3, axis: axisWorld).act(dirW)
                 let sign: Float = simd_dot(turned, palm) > simd_dot(dirW, palm) ? 1 : -1
-                fingers.append((node, node.simdOrientation, axisLocal, sign, fi))
+                fingers.append((node, node.simdOrientation, axisLocal, sign, fi, j - 1))
             }
         }
     }
@@ -189,19 +216,24 @@ private final class ArmRig {
         let hd = simd_normalize(handDir)
         var pn = palm - hd * simd_dot(palm, hd)
         pn = simd_length(pn) < 1e-4 ? SIMD3(0, -1, 0) : simd_normalize(pn)
-        let wrist = tip - hd * 0.15 - pn * 0.02
+        let wrist = tip - hd * handLength - pn * (handLength * 0.10)
         let shoulder = arm.simdWorldPosition
 
         // 2本の骨の IK（肘は外側やや下・後ろへ）
-        var d = wrist - shoulder
-        var dist = max(0.05, simd_length(d))
-        let maxReach = l1 + l2 - 0.002
-        if dist > maxReach { d = d / dist * maxReach; dist = maxReach }
-        let dir = d / dist
+        let delta = wrist - shoulder
+        let rawDistance = simd_length(delta)
+        let dir = rawDistance > 1e-5 ? delta / rawDistance : SIMD3<Float>(0, -1, 0)
+        let minReach = abs(l1 - l2) + 0.004
+        let maxReach = max(minReach, l1 + l2 - 0.004)
+        let dist = max(minReach, min(maxReach, rawDistance))
+        let d = dir * dist
         let a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist)
         let h = sqrt(max(0, l1 * l1 - a * a))
         var pole = SIMD3<Float>(side * 0.7, -0.6, 0.4)
-        pole = simd_normalize(pole - dir * simd_dot(pole, dir))
+        pole -= dir * simd_dot(pole, dir)
+        if simd_length(pole) < 1e-4 { pole = simd_cross(dir, SIMD3<Float>(0, 0, 1)) }
+        if simd_length(pole) < 1e-4 { pole = simd_cross(dir, SIMD3<Float>(1, 0, 0)) }
+        pole = simd_normalize(pole)
         let elbow = shoulder + dir * a + pole * h
         let w = shoulder + d
 
@@ -209,18 +241,22 @@ private final class ArmRig {
         func frame(_ y: SIMD3<Float>, _ ref: SIMD3<Float>) -> simd_float3x3 {
             var r = ref - y * simd_dot(ref, y)
             if simd_length(r) < 1e-4 { r = simd_cross(y, SIMD3<Float>(1, 0, 0)) }
+            if simd_length(r) < 1e-4 { r = simd_cross(y, SIMD3<Float>(0, 0, 1)) }
             r = simd_normalize(r)
             return simd_float3x3(columns: (y, r, simd_normalize(simd_cross(y, r))))
         }
         func aim(_ q0: simd_quatf, _ y0: SIMD3<Float>, _ y1: SIMD3<Float>) -> simd_quatf {
             simd_quatf(frame(y1, pn) * frame(y0, palm0).transpose) * q0
         }
-        orient(arm, aim(qArm0, armDir0, simd_normalize(elbow - shoulder)))
-        orient(fore, aim(qFore0, foreDir0, simd_normalize(w - elbow)))
+        orient(arm, simd_quatf(from: armDir0, to: simd_normalize(elbow - shoulder)) * qArm0)
+        orient(fore, simd_quatf(from: foreDir0, to: simd_normalize(w - elbow)) * qFore0)
         orient(hand, aim(qHand0, handDir0, hd))
 
         for f in fingers {
-            let c = curl[f.finger] * (f.finger == 4 ? 0.9 : 1.15)
+            let weight: Float = f.finger == 4
+                ? (f.joint == 0 ? 0.45 : f.joint == 1 ? 0.65 : 0.4)
+                : (f.joint == 0 ? 0.72 : f.joint == 1 ? 1.0 : 0.55)
+            let c = min(1.3, max(0, curl[f.finger] * weight))
             f.node.simdOrientation = f.bind * simd_quatf(angle: c * f.sign, axis: f.axis)
         }
     }
@@ -307,19 +343,21 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         cam.zNear = 0.02
         cam.zFar = 60
         cam.wantsHDR = true
-        cam.bloomIntensity = 0.8
-        cam.bloomThreshold = 0.92
-        cam.bloomBlurRadius = 10
-        cam.vignettingIntensity = 0.5
+        cam.bloomIntensity = 0.32
+        cam.bloomThreshold = 1.25
+        cam.bloomBlurRadius = 6
+        cam.vignettingIntensity = 0.3
         cam.vignettingPower = 1.2
-        cam.screenSpaceAmbientOcclusionIntensity = 0.7
-        cam.exposureOffset = -0.1
-        cam.saturation = 1.08
-        cam.wantsDepthOfField = true
+        cam.screenSpaceAmbientOcclusionIntensity = 0.55
+        cam.screenSpaceAmbientOcclusionRadius = 0.18
+        cam.wantsExposureAdaptation = false
+        cam.exposureOffset = -0.55
+        cam.saturation = 1.0
+        cam.wantsDepthOfField = false
         cam.focusDistance = 2.0
         cam.fStop = 9
         cam.apertureBladeCount = 6
-        cam.motionBlurIntensity = 0.25
+        cam.motionBlurIntensity = 0
         cameraNode.camera = cam
         cameraNode.position = SCNVector3(0, 1.3, 1.45)
         cameraNode.look(at: SCNVector3(0, -0.3, -1.9))
@@ -336,10 +374,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         scene.rootNode.addChildNode(cameraNode)
 
         scene.lightingEnvironment.contents = Self.environmentImage(venue)
-        scene.lightingEnvironment.intensity = 0.6
+        scene.lightingEnvironment.intensity = 0.38
         scene.background.contents = UIColor.black
         scene.fogColor = UIColor(venue.palette.1)
-        scene.fogStartDistance = 5
+        scene.fogStartDistance = 7
         scene.fogEndDistance = 22
         scene.fogDensityExponent = 1.4
 
@@ -410,7 +448,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         floor.position = SCNVector3(0, -1.02, -8)
         let fm = SCNMaterial()
         fm.diffuse.contents = UIColor(white: 0.035, alpha: 1)
-        pbr(fm, rough: 0.32, metal: 0.1)
+        pbr(fm, rough: 0.48, metal: 0.04)
         floor.geometry?.materials = [fm]
         scene.rootNode.addChildNode(floor)
         // もや（薄い板を何枚か重ねて空気の厚みを出す）
@@ -487,11 +525,26 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 b.geometry?.materials = [spkM]
                 b.position = SCNVector3(x, -0.57 + Float(k) * 0.92, -1.6)
                 scene.rootNode.addChildNode(b)
-                let cone = SCNNode(geometry: SCNCylinder(radius: 0.3, height: 0.02))
+                let cone = SCNNode(geometry: SCNCone(topRadius: 0.10, bottomRadius: 0.28, height: 0.075))
                 cone.geometry?.materials = [coneM]
                 cone.eulerAngles.x = .pi / 2
                 cone.position = SCNVector3(0, 0, 0.41)
                 b.addChildNode(cone)
+                let capShape = SCNSphere(radius: 0.105)
+                capShape.segmentCount = 16
+                let cap = SCNNode(geometry: capShape)
+                cap.geometry?.materials = [coneM]
+                cap.scale = SCNVector3(1, 1, 0.32)
+                cap.position = SCNVector3(0, 0, 0.46)
+                b.addChildNode(cap)
+                let surroundShape = SCNTorus(ringRadius: 0.284, pipeRadius: 0.015)
+                surroundShape.ringSegmentCount = 32
+                surroundShape.pipeSegmentCount = 8
+                let surround = SCNNode(geometry: surroundShape)
+                surround.geometry?.materials = [spkM]
+                surround.eulerAngles.x = .pi / 2
+                surround.position = SCNVector3(0, 0, 0.408)
+                b.addChildNode(surround)
             }
         }
     }
@@ -505,22 +558,36 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             guard let g = node.geometry else { return }
             for m in g.materials {
                 let n = (m.name ?? "").lowercased()
-                if n.contains("print") { self.pbr(m, rough: n.contains("booth") ? 0.35 : 0.6, metal: 0.15) }
+                m.emission.contents = UIColor.black
+                m.clearCoat.contents = 0
+                if n.contains("print") { self.pbr(m, rough: n.contains("booth") ? 0.58 : 0.72) }
                 else if n.contains("lamp_bulb") {
                     m.lightingModel = .constant
                     m.emission.contents = UIColor(red: 1, green: 0.9, blue: 0.75, alpha: 1)
-                    m.emission.intensity = 3
+                    m.emission.intensity = 1.4
                 }
                 else if n.contains("cup") { self.pbr(m, rough: 0.25) }
                 else if n.contains("drink") { self.pbr(m, rough: 0.05) }
                 else if n.contains("cable") || n.contains("hp_pad") { self.pbr(m, rough: 0.6) }
                 else if n.contains("gunmetal") { self.pbr(m, rough: 0.38, metal: 0.85) }
-                else if n.contains("alu") { self.pbr(m, rough: 0.25, metal: 1) }
-                else if n.contains("chrome") { self.pbr(m, rough: 0.1, metal: 1) }
+                else if n.contains("alu") { self.pbr(m, rough: 0.4, metal: 1) }
+                else if n.contains("chrome") { self.pbr(m, rough: 0.22, metal: 1) }
                 else if n.contains("rubber") || n.contains("pad") { self.pbr(m, rough: 0.85) }
-                else if n.contains("glass") { self.pbr(m, rough: 0.05) }
-                else if n.contains("booth_top") { self.pbr(m, rough: 0.3, metal: 0.05) }
-                else { self.pbr(m, rough: 0.5, metal: 0.1) }
+                else if n.contains("glass") { self.pbr(m, rough: 0.18); m.clearCoat.contents = 0.2 }
+                else if n.contains("booth_top") { self.pbr(m, rough: 0.58) }
+                else { self.pbr(m, rough: 0.64) }
+                if n.contains("gunmetal") || n.contains("alu") {
+                    m.normal.contents = Self.metalNormal
+                    m.normal.intensity = 0.18
+                    m.normal.wrapS = .repeat; m.normal.wrapT = .repeat
+                    m.normal.contentsTransform = SCNMatrix4MakeScale(5, 5, 1)
+                    if let rough = Self.metalRough {
+                        m.roughness.contents = rough
+                        m.roughness.wrapS = .repeat; m.roughness.wrapT = .repeat
+                        m.roughness.contentsTransform = SCNMatrix4MakeScale(5, 5, 1)
+                    }
+                }
+                Self.gearSurface(m, material: n, node: (node.name ?? "").lowercased())
             }
         }
 
@@ -559,11 +626,12 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             let l = SCNNode()
             l.light = SCNLight()
             l.light?.type = .spot
-            l.light?.intensity = 260
+            l.light?.intensity = 35
             l.light?.color = UIColor(red: 1, green: 0.88, blue: 0.7, alpha: 1)
-            l.light?.spotInnerAngle = 25
-            l.light?.spotOuterAngle = 75
-            l.light?.attenuationEndDistance = 1.2
+            l.light?.spotInnerAngle = 18
+            l.light?.spotOuterAngle = 58
+            l.light?.attenuationStartDistance = 0.12
+            l.light?.attenuationEndDistance = 0.7
             l.simdPosition = head.simdWorldPosition
             gear.addChildNode(l)
             l.look(at: SCNVector3(0, 0.06, -0.02))
@@ -571,7 +639,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         if let led = find("booth_led") {
             boothLED = uniq(led)
             boothLED?.geometry?.firstMaterial?.emission.contents = UIColor(venue.palette.2)
-            boothLED?.geometry?.firstMaterial?.emission.intensity = 4
+            boothLED?.geometry?.firstMaterial?.emission.intensity = 1.6
         }
         for i in 0..<platters.count { applyPlatter(i, vinyl(nil)) }
         for i in 0..<screens.count { applyScreen(i, title: nil, mode: "STANDBY", color: .gray) }
@@ -604,6 +672,23 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 }
                 pbrS(m, rough: isSkin ? 0.5 : 0.75)
                 if isSkin { skinMaterial(m) }
+                else if lname.contains("low-poly") {
+                    // The existing eye atlas stays intact; corneal sheen is restrained.
+                    pbrS(m, rough: 0.16)
+                    m.clearCoat.contents = 0.14
+                    m.clearCoatRoughness.contents = 0.20
+                } else if ["bob", "afro", "ponytail", "long", "short", "braid"].contains(where: { lname.contains($0) }) {
+                    // Preserve the strand alpha and silhouette, vary their highlights.
+                    _ = useMap(m.roughness, "hair_detail_rough", tile: 2)
+                } else if ["suit", "shirt", "jean", "pants", "skirt", "dress", "jacket", "fedora"].contains(where: { lname.contains($0) }) {
+                    _ = useMap(m.normal, "fabric_detail_normal", tile: 32)
+                    m.normal.intensity = 0.24
+                    _ = useMap(m.roughness, "fabric_detail_rough", tile: 2)
+                } else if lname.contains("shoes") {
+                    _ = useMap(m.normal, "polymer_detail_normal", tile: 10)
+                    m.normal.intensity = 0.15
+                    _ = useMap(m.roughness, "polymer_use_rough", tile: 2)
+                }
                 if alpha {
                     m.transparencyMode = .aOne
                     m.blendMode = .alpha
@@ -616,7 +701,65 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         return n
     }
 
-    // 肌：毛穴の凹凸・つやの揺らぎ・うっすら脂っぽさ・縁が赤く透ける感じ
+    // Shared baked maps: no new mesh, shader, per-frame work or texture per person.
+    private static let surfaceImages: [String: UIImage] = {
+        let panels = ["deck_a", "deck_b", "mixer", "booth"].flatMap { p in
+            ["\(p)_use_rough", "\(p)_use_normal", "\(p)_use_multiply"]
+        }
+        let names = panels + ["polymer_detail_normal", "polymer_use_rough", "rubber_use_rough",
+                              "metal_use_rough", "chrome_use_rough", "fabric_detail_normal", "fabric_detail_rough",
+                              "hair_detail_rough", "skin_zone_rough", "skin_zone_multiply"]
+        var images: [String: UIImage] = [:]
+        for name in names { if let image = UIImage(named: name) { images[name] = image } }
+        return images
+    }()
+
+    @discardableResult
+    private static func useMap(_ property: SCNMaterialProperty, _ name: String, tile: Float = 1) -> Bool {
+        guard let image = surfaceImages[name] else { return false }
+        property.contents = image
+        property.contentsTransform = SCNMatrix4MakeScale(tile, tile, 1)
+        property.wrapS = tile > 1 ? .repeat : .clamp
+        property.wrapT = tile > 1 ? .repeat : .clamp
+        property.minificationFilter = .linear
+        property.magnificationFilter = .linear
+        property.mipFilter = .linear
+        return true
+    }
+
+    private static func gearSurface(_ m: SCNMaterial, material: String, node: String) {
+        let panel: String?
+        switch node {
+        case "print_a": panel = "deck_a"
+        case "print_b": panel = "deck_b"
+        case "print_mixer": panel = "mixer"
+        case "booth_top_print": panel = "booth"
+        default: panel = nil
+        }
+        if let panel {
+            // Existing print-plane UVs locate wear beside actual PLAY/CUE, jog and faders.
+            _ = useMap(m.roughness, "\(panel)_use_rough")
+            _ = useMap(m.multiply, "\(panel)_use_multiply")
+            _ = useMap(m.normal, "\(panel)_use_normal")
+            m.normal.intensity = 0.30
+        } else if material.contains("gunmetal") || material.contains("alu") || material.contains("lamp_metal") {
+            _ = useMap(m.roughness, "metal_use_rough", tile: 3)
+        } else if material.contains("chrome") {
+            _ = useMap(m.roughness, "chrome_use_rough", tile: 4)
+        } else if material.contains("knob") || material.contains("fader_cap") || material.contains("hp_shell") {
+            _ = useMap(m.roughness, "polymer_use_rough", tile: 2)
+            _ = useMap(m.normal, "polymer_detail_normal", tile: 3)
+            m.normal.intensity = 0.20
+        } else if material.contains("rubber") || material.contains("hp_pad") || material.contains("cable") || material.contains("speaker_cab") {
+            _ = useMap(m.roughness, "rubber_use_rough", tile: 3)
+            _ = useMap(m.normal, "polymer_detail_normal", tile: 5)
+            m.normal.intensity = 0.12
+        }
+    }
+
+    // Pore scale and regional sheen remain distinct from the diffuse complexion.
+    private static let metalNormal = UIImage(named: "metal_detail_normal")
+    private static let metalRough = UIImage(named: "metal_detail_rough")
     private static let skinNormal = UIImage(named: "skin_detail_normal")
     private static let skinRough = UIImage(named: "skin_detail_rough")
 
@@ -626,26 +769,27 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             m.normal.contents = n
             m.normal.contentsTransform = tile
             m.normal.wrapS = .repeat; m.normal.wrapT = .repeat
-            m.normal.intensity = 0.55
+            m.normal.intensity = 0.16
         }
-        if let r = skinRough {
+        if !useMap(m.roughness, "skin_zone_rough"), let r = skinRough {
             m.roughness.contents = r
             m.roughness.contentsTransform = tile
             m.roughness.wrapS = .repeat; m.roughness.wrapT = .repeat
         }
-        m.clearCoat.contents = 0.12
-        m.clearCoatRoughness.contents = 0.38
-        m.shaderModifiers = [.fragment: """
-        float ndv = saturate(dot(_surface.normal, _surface.view));
-        float rim = pow(1.0 - ndv, 2.6);
-        _output.color.rgb += _surface.diffuse.rgb * float3(0.6, 0.14, 0.08) * rim * 0.32;
-        """]
+        _ = useMap(m.multiply, "skin_zone_multiply")
+        m.clearCoat.contents = 0.02
+        m.clearCoatRoughness.contents = 0.55
+        // Skin responds to the actual club lights; avoid an emissive rim.
+        m.shaderModifiers = nil
     }
 
     private static func robotMaterial(_ m: SCNMaterial, _ n: String) {
         m.lightingModel = .physicallyBased
-        if n.contains("chrome") { m.metalness.contents = 1.0; m.roughness.contents = 0.1 }
-        else if n.contains("white") { m.diffuse.contents = UIColor(white: 0.72, alpha: 1); m.metalness.contents = 0.0; m.roughness.contents = 0.3; m.clearCoat.contents = 0.5; m.clearCoatRoughness.contents = 0.12 }
+        if n.contains("chrome") {
+            m.metalness.contents = 1.0; m.roughness.contents = 0.24
+            _ = useMap(m.roughness, "chrome_use_rough", tile: 4)
+        }
+        else if n.contains("white") { m.diffuse.contents = UIColor(white: 0.72, alpha: 1); m.metalness.contents = 0.0; m.roughness.contents = 0.44; m.clearCoat.contents = 0.18; m.clearCoatRoughness.contents = 0.35 }
         else if n.contains("orange") { m.metalness.contents = 0.25; m.roughness.contents = 0.38; m.clearCoat.contents = 0.4 }
         else if n.contains("glow") || n.contains("lamp") {
             let c: UIColor = n.contains("cyan") ? UIColor(red: 0.2, green: 0.85, blue: 1, alpha: 1)
@@ -697,7 +841,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let far = names.compactMap { loadCharacter($0, lod: true) }
         guard !near.isEmpty else { return [] }
         let count = min(96, venue.crowdSize * 2 + 20)
-        var seed: UInt64 = 0x9E3779B97F4A7C15 &+ UInt64(abs(venue.rawValue.hashValue) % 1000)
+        var seed: UInt64 = venue.rawValue.utf8.reduce(0x9E3779B97F4A7C15) { ($0 &* 31) &+ UInt64($1) }
         func rnd() -> Float {
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
             return Float(seed >> 40) / Float(1 << 24)
@@ -727,8 +871,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             node.position = SCNVector3(pos.x, -1.02, pos.y)
             // DJ のほうを向く（少しばらつかせる）
             node.eulerAngles.y = atan2(-pos.x, 1.0 - pos.y) + (rnd() - 0.5) * 0.5
-            let sc = 0.95 + rnd() * 0.1
-            node.scale = SCNVector3(sc, sc, sc)
+            let sc = 0.92 + rnd() * 0.16
+            let width = 0.96 + rnd() * 0.08
+            node.scale = SCNVector3(sc * width, sc, sc * width)
+            node.enumerateHierarchy { n, _ in n.castsShadow = !useFar }
             parent.addChildNode(node)
 
             let special: Int = i < 6 ? [1, 2, 3, 4, 5, 0][i] : 0
@@ -738,7 +884,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 let key = "mixamorig:\(b)"
                 guard let bn = node.childNode(withName: key, recursively: true)
                         ?? node.childNode(withName: "rig_mixamorig_\(b)", recursively: true) else { continue }
-                p.bones.append((bn, key, bn.simdOrientation))
+                p.bones.append((bn, key, bn.simdOrientation, CrowdClips.space(for: bn, in: p.root, name: key)))
                 if b == "Hips" { p.hips = bn; p.hipsBind = bn.simdPosition }
             }
             if special == 5 { node.isHidden = true }   // 伝説のクラバーは INSANE で現れる
@@ -781,7 +927,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 let key = "mixamorig:\(b)"
                 guard let bn = dj.childNode(withName: key, recursively: true)
                         ?? dj.childNode(withName: "rig_mixamorig_\(b)", recursively: true) else { continue }
-                p.bones.append((bn, key, bn.simdOrientation))
+                p.bones.append((bn, key, bn.simdOrientation, CrowdClips.space(for: bn, in: p.root, name: key)))
                 if b == "Hips" { p.hips = bn; p.hipsBind = bn.simdPosition }
             }
             people.append(p)
@@ -845,7 +991,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 let key = "mixamorig:\(b)"
                 guard let bn = vj.childNode(withName: key, recursively: true)
                         ?? vj.childNode(withName: "rig_mixamorig_\(b)", recursively: true) else { continue }
-                p.bones.append((bn, key, bn.simdOrientation))
+                p.bones.append((bn, key, bn.simdOrientation, CrowdClips.space(for: bn, in: p.root, name: key)))
                 if b == "Hips" { p.hips = bn; p.hipsBind = bn.simdPosition }
             }
             people.append(p)
@@ -873,7 +1019,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let key = SCNNode()
         key.light = SCNLight()
         key.light?.type = .spot
-        key.light?.intensity = 170
+        key.light?.intensity = 145
         key.light?.color = UIColor(red: 1, green: 0.92, blue: 0.82, alpha: 1)
         key.light?.spotInnerAngle = 30
         key.light?.spotOuterAngle = 70
@@ -881,6 +1027,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         key.light?.shadowMode = .deferred
         key.light?.shadowRadius = 4
         key.light?.shadowSampleCount = 8
+        key.light?.shadowMapSize = CGSize(width: 1024, height: 1024)
+        key.light?.attenuationStartDistance = 0.5
+        key.light?.attenuationEndDistance = 3.0
         key.light?.shadowColor = UIColor(white: 0, alpha: 0.7)
         key.position = SCNVector3(0.2, 1.6, -0.2)
         key.look(at: SCNVector3(0, 0, 0))
@@ -890,12 +1039,26 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let back = SCNNode()
         back.light = SCNLight()
         back.light?.type = .omni
-        back.light?.intensity = 900
+        back.light?.intensity = 420
         back.light?.color = light
         back.light?.attenuationStartDistance = 2
         back.light?.attenuationEndDistance = 16
         back.position = SCNVector3(0, 3, -11)
         scene.rootNode.addChildNode(back)
+
+        // Soft front fill reveals faces without flooding the booth.
+        let fill = SCNNode()
+        fill.light = SCNLight()
+        fill.light?.type = .spot
+        fill.light?.color = UIColor(red: 0.68, green: 0.8, blue: 1, alpha: 1)
+        fill.light?.intensity = 190
+        fill.light?.spotInnerAngle = 50
+        fill.light?.spotOuterAngle = 90
+        fill.light?.attenuationStartDistance = 1
+        fill.light?.attenuationEndDistance = 11
+        fill.position = SCNVector3(0, 2.1, -0.8)
+        fill.look(at: SCNVector3(0, -0.15, -5.5))
+        scene.rootNode.addChildNode(fill)
 
         // ムービングライト（光の筋つき）
         let beamImg = Self.beamImage()
@@ -907,7 +1070,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             n.light?.intensity = 0
             n.light?.spotInnerAngle = 6
             n.light?.spotOuterAngle = 22
-            n.light?.attenuationEndDistance = 14
+            n.light?.attenuationStartDistance = 1.5
+            n.light?.attenuationEndDistance = 13
             n.light?.color = color
             n.position = SCNVector3(-4.5 + Float(i) * 3, 3.25, i % 2 == 0 ? -3 : -7.5)
             let beam = SCNNode(geometry: SCNCone(topRadius: 0.05, bottomRadius: 1.4, height: 9))
@@ -1178,11 +1342,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private func updateCrowd(_ people: [Person], t: Float, dt: Float, energy: Double) {
         let clips = CrowdClips.all
         guard !clips.isEmpty else { return }
-        let legend = energy >= 99.5
         for p in people {
             if p.special == 5 { p.root.isHidden = energy < 81 }
-            p.phoneLight?.isHidden = energy < 95
+
             let want = clipFor(p, energy: energy)
+            p.phoneLight?.isHidden = !(want == "phone" || energy >= 95)
             if want != p.clip {
                 p.prevClip = p.clip
                 p.clip = want
@@ -1190,15 +1354,23 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             }
             p.blend = min(1, p.blend + dt * 2.5)
             guard let c = clips[p.clip] else { continue }
-            let ft = (t * (legend ? 1 : p.speed) + (legend ? 0 : p.phase)) * CrowdClips.fps
-            let f = Int(ft) % max(1, c.frames)
+            p.clock += dt * p.speed
+            let ft = p.clock * CrowdClips.fps
+            let frame = Int(ft)
+            let fraction = ft - Float(frame)
+            let f = frame % max(1, c.frames)
+            let nf = (f + 1) % max(1, c.frames)
             let prev = p.blend < 1 ? p.prevClip.flatMap { clips[$0] } : nil
-            let pf = prev.map { Int(ft) % max(1, $0.frames) } ?? 0
+            let pf = prev.map { frame % max(1, $0.frames) } ?? 0
+            let npf = prev.map { (pf + 1) % max(1, $0.frames) } ?? 0
+            let blend = p.blend * p.blend * (3 - 2 * p.blend)
             for b in p.bones {
                 guard let qs = c.bones[b.name], f < qs.count else { continue }
-                var q = b.bind * qs[f]
+                let delta = simd_slerp(qs[f], qs[min(nf, qs.count - 1)], fraction)
+                var q = b.bind * b.space * delta * b.space.inverse
                 if let pc = prev, let pqs = pc.bones[b.name], pf < pqs.count {
-                    q = simd_slerp(b.bind * pqs[pf], q, p.blend)
+                    let from = simd_slerp(pqs[pf], pqs[min(npf, pqs.count - 1)], fraction)
+                    q = simd_slerp(b.bind * b.space * from * b.space.inverse, q, blend)
                 }
                 b.node.simdOrientation = q
             }
@@ -1215,8 +1387,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 }
             }
             if let h = p.hips, f < c.hips.count {
-                var off = c.hips[f]
-                if let pc = prev, pf < pc.hips.count { off = simd_mix(pc.hips[pf], off, SIMD3<Float>(repeating: p.blend)) }
+                var off = simd_mix(c.hips[f], c.hips[min(nf, c.hips.count - 1)], SIMD3<Float>(repeating: fraction))
+                if let pc = prev, pf < pc.hips.count {
+                    let from = simd_mix(pc.hips[pf], pc.hips[min(npf, pc.hips.count - 1)], SIMD3<Float>(repeating: fraction))
+                    off = simd_mix(from, off, SIMD3<Float>(repeating: blend))
+                }
                 h.simdPosition = p.hipsBind + off
             }
         }
@@ -1226,10 +1401,14 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         for d in 0..<arms.count {
             for k in 0..<arms[d].count {
                 let rig = arms[d][k]
+                guard d < targets.count, d < gestures.count,
+                      k < targets[d].count, k < gestures[d].count else { continue }
                 let goal = targets[d][k]
                 let g = gestures[d][k]
                 rig.tip += (goal - rig.tip) * min(1, dt * 5)
                 var tip = rig.tip
+                // Lift during a reach, then settle the fingertip on the control.
+                tip.y += min(0.045, simd_distance(goal, rig.tip) * 0.22)
                 // 手の向き：前へ、やや内側・下向き。手のひらは下
                 let inward: Float = -rig.side * 0.25
                 var hd = simd_normalize(SIMD3<Float>(inward, -0.45, -1))
@@ -1247,7 +1426,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                     palm = SIMD3<Float>(0, -0.4, 0.9)
                     curl = [0.9, 1.25, 1.35, 1.4, 0.8]
                 case .tap(let speed):
-                    tip.y += max(0, sin(t * 7 * speed)) * 0.022
+                    tip.y += max(0, sin(t * 5 * speed)) * 0.012
                     hd = simd_normalize(SIMD3<Float>(inward, -0.75, -0.7))
                     curl = [0.08, 1.3, 1.4, 1.45, 0.9]
                 case .hold:
@@ -1284,17 +1463,17 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     private func updateLights(t: Float, energy: Double) {
         let e = Float(energy / 100)
-        ambient.light?.intensity = CGFloat(25 + e * 55)
+        ambient.light?.intensity = CGFloat(22 + e * 30)
         for (i, m) in movers.enumerated() {
             let active = Float(i) < e * 5
-            let target: CGFloat = active ? CGFloat(1500 + e * 2500) : 0
+            let target: CGFloat = active ? CGFloat(260 + e * 580) : 0
             let cur = m.light?.intensity ?? 0
             m.light?.intensity = cur + (target - cur) * 0.1
             let pan = sin(t * (0.5 + Float(i) * 0.07) + Float(i)) * 0.6
             let tilt = -0.75 + sin(t * 0.7 + Float(i) * 1.3) * 0.25
             m.simdOrientation = simd_quatf(angle: pan, axis: SIMD3<Float>(0, 1, 0)) * simd_quatf(angle: tilt, axis: SIMD3<Float>(1, 0, 0))
             if let beam = m.childNode(withName: "beam", recursively: false) {
-                let goal: CGFloat = active ? CGFloat(0.22 + e * 0.25) : 0
+                let goal: CGFloat = active ? CGFloat(0.06 + e * 0.10) : 0
                 beam.opacity += (goal - beam.opacity) * 0.1
             }
         }
@@ -1314,10 +1493,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             }
         }
         let legend = energy >= 99.5
-        if legend && sin(t * 24) > 0.85 { ambient.light?.intensity = 900 }   // ストロボ
-        confetti?.birthRate = legend ? 220 : 0
+        // A gentle light swell keeps detail visible during the finale.
+        if legend { ambient.light?.intensity = CGFloat(52 + 12 * (0.5 + 0.5 * sin(t * 2.4))) }
+        confetti?.birthRate = legend ? 150 : 0
         for (k, h) in hazes.enumerated() {
-            h.opacity = CGFloat(0.08 + e * 0.18 + sin(t * 0.3 + Float(k)) * 0.03)
+            h.opacity = CGFloat(0.035 + e * 0.075 + sin(t * 0.3 + Float(k)) * 0.015)
             h.position.x = sin(t * 0.07 + Float(k) * 2) * 1.2
         }
         updateVJ(t: t, energy: energy, legend: legend)
@@ -1330,16 +1510,19 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let m = SCNMaterial()
         m.lightingModel = .constant
         m.isDoubleSided = false
+        let fallback = Self.ledWallImage(top: UIColor(venue.palette.0), accent: UIColor(venue.palette.2))
+        // A diffuse texture keeps the screen UV mapping active in SceneKit.
+        m.diffuse.contents = fallback
         m.shaderModifiers = [.surface: Self.vjShader]
         m.setValue(NSNumber(value: aspect), forKey: "vjAspect")
-        m.setValue(NSNumber(value: 0), forKey: "vjTime")
-        m.setValue(NSNumber(value: 0.5), forKey: "vjEnergy")
-        m.setValue(NSNumber(value: 0), forKey: "vjMode")
-        m.setValue(NSNumber(value: 0), forKey: "vjCut")
-        m.setValue(NSNumber(value: 1), forKey: "vjOn")
+        m.setValue(NSNumber(value: Float(0)), forKey: "vjTime")
+        m.setValue(NSNumber(value: Float(0.5)), forKey: "vjEnergy")
+        m.setValue(NSNumber(value: Float(0)), forKey: "vjMode")
+        m.setValue(NSNumber(value: Float(0)), forKey: "vjCut")
+        m.setValue(NSNumber(value: Float(1)), forKey: "vjOn")
         m.setValue(NSValue(scnVector3: SCNVector3(1, 0.2, 0.6)), forKey: "vjColA")
         m.setValue(NSValue(scnVector3: SCNVector3(0.2, 0.6, 1)), forKey: "vjColB")
-        m.setValue(SCNMaterialProperty(contents: UIColor.darkGray), forKey: "vjArt")
+        m.setValue(SCNMaterialProperty(contents: fallback), forKey: "vjArt")
         m.setValue(SCNMaterialProperty(contents: UIColor.black), forKey: "vjText")
         vjMaterials.append(m)
         return m
@@ -1402,8 +1585,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         float bg = 0.12 + 0.08 * sin(uv.x * 30.0 + t * 2.0);
         col = mix(vjColA * bg, mix(float3(1.0), vjColB, 0.3), txt);
     }
-    col += vjCut;
-    col *= (0.45 + 0.95 * e) * vjOn;
+    // LED panel cells and restrained highlights, including track changes.
+    float2 cell = abs(fract(uv * float2(144.0 * vjAspect, 144.0)) - 0.5);
+    float pixels = 1.0 - smoothstep(0.39, 0.5, max(cell.x, cell.y));
+    float detail = 1.0 - saturate(length(fwidth(uv)) * 144.0);
+    col *= mix(1.0, 0.78 + 0.22 * pixels, detail);
+    col += mix(vjColA, vjColB, 0.5) * vjCut * 0.16;
+    col *= (0.32 + 0.62 * e) * vjOn;
     _surface.diffuse = float4(col, 1.0);
     """
 
@@ -1418,6 +1606,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             vjModeNow = s.vjMode.index
         }
         vjCutAt = vjTimeNow
+        updateVJArtwork(s)
+    }
+
+    @MainActor
+    private func updateVJArtwork(_ s: BoothState) {
         guard let t = s.current else { return }
         let art = art(for: t) ?? vinyl(nil)
         let (a, b) = Self.palette(art)
@@ -1433,13 +1626,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private func updateVJ(t: Float, energy: Double, legend: Bool) {
         vjTimeNow = t
         let cut = max(0, 1 - (t - vjCutAt) * 3)
-        let flash: Float = legend && sin(t * 18) > 0.7 ? 0.5 : 0
+        let flash: Float = legend ? 0.08 * (0.5 + 0.5 * sin(t * 2.4)) : 0
         for m in vjMaterials {
             m.setValue(NSNumber(value: t), forKey: "vjTime")
             m.setValue(NSNumber(value: Float(energy / 100)), forKey: "vjEnergy")
             m.setValue(NSNumber(value: vjModeNow), forKey: "vjMode")
             m.setValue(NSNumber(value: cut + flash), forKey: "vjCut")
-            m.setValue(NSNumber(value: vjOn ? 1 : 0.05), forKey: "vjOn")
+            m.setValue(NSNumber(value: Float(vjOn ? 1 : 0)), forKey: "vjOn")
         }
     }
 
@@ -1498,7 +1691,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
         let m = screens[d].geometry?.firstMaterial
         m?.emission.contents = img
-        m?.emission.intensity = 1.2
+        m?.emission.intensity = 0.8
     }
 
     @MainActor
@@ -1510,7 +1703,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 Task { @MainActor [weak self] in
                     guard let (data, _) = try? await URLSession.shared.data(from: url), let img = UIImage(data: data), let self else { return }
                     self.artCache[t.id] = img
-                    if let s = self.lastApplied { self.updateDecks(s) }
+                    if let s = self.lastApplied { self.updateDecks(s); self.updateVJArtwork(s) }
                 }
             }
             return nil
