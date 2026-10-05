@@ -316,8 +316,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         cam.exposureOffset = -0.1
         cam.saturation = 1.08
         cam.wantsDepthOfField = true
-        cam.focusDistance = 2.6
-        cam.fStop = 4.5
+        cam.focusDistance = 2.0
+        cam.fStop = 9
         cam.apertureBladeCount = 6
         cam.motionBlurIntensity = 0.25
         cameraNode.camera = cam
@@ -336,7 +336,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         scene.rootNode.addChildNode(cameraNode)
 
         scene.lightingEnvironment.contents = Self.environmentImage(venue)
-        scene.lightingEnvironment.intensity = 0.9
+        scene.lightingEnvironment.intensity = 0.6
         scene.background.contents = UIColor.black
         scene.fogColor = UIColor(venue.palette.1)
         scene.fogStartDistance = 5
@@ -1270,7 +1270,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     private func updateLights(t: Float, energy: Double) {
         let e = Float(energy / 100)
-        ambient.light?.intensity = CGFloat(40 + e * 90)
+        ambient.light?.intensity = CGFloat(25 + e * 55)
         for (i, m) in movers.enumerated() {
             let active = Float(i) < e * 5
             let target: CGFloat = active ? CGFloat(1500 + e * 2500) : 0
