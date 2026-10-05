@@ -151,8 +151,8 @@ private final class ArmRig {
         handDir0 = simd_normalize(mid.simdWorldPosition - ph)
         let across = simd_normalize(idx.simdWorldPosition - pinky.simdWorldPosition)
         var palm = simd_normalize(simd_cross(handDir0, across))
-        // 手のひらは体の中心を向いている（A ポーズ）
-        if palm.x * ph.x > 0 { palm = -palm }
+        // 親指の付け根は手のひら側にある
+        if let th = n("HandThumb1"), simd_dot(th.simdWorldPosition - ph, palm) < 0 { palm = -palm }
         palm0 = palm
 
         let names = [("Index", 0), ("Middle", 1), ("Ring", 2), ("Pinky", 3), ("Thumb", 4)]
@@ -192,26 +192,23 @@ private final class ArmRig {
         let elbow = shoulder + dir * a + pole * h
         let w = shoulder + d
 
-        // 上腕
-        let armDir = simd_normalize(elbow - shoulder)
-        let qa = simd_quatf(from: armDir0, to: armDir) * qArm0
+        // 3本の骨を「骨の向き＋手のひらの向き」で同じようにそろえる（ねじれを均等にする）
+        func frame(_ y: SIMD3<Float>, _ ref: SIMD3<Float>) -> simd_float3x3 {
+            var r = ref - y * simd_dot(ref, y)
+            if simd_length(r) < 1e-4 { r = simd_cross(y, SIMD3<Float>(1, 0, 0)) }
+            r = simd_normalize(r)
+            return simd_float3x3(columns: (y, r, simd_normalize(simd_cross(y, r))))
+        }
+        func aim(_ q0: simd_quatf, _ y0: SIMD3<Float>, _ y1: SIMD3<Float>) -> simd_quatf {
+            let r = frame(y1, pn) * frame(y0, palm0).transpose
+            return simd_quatf(r) * q0
+        }
         arm.simdWorldPosition = shoulder
-        arm.simdWorldOrientation = qa
-
-        // 手の向き：バインド時の（手の向き, 手のひら）を目標の組へ回す
-        let b0 = simd_float3x3(columns: (handDir0, palm0, simd_normalize(simd_cross(handDir0, palm0))))
-        let b1 = simd_float3x3(columns: (hd, pn, simd_normalize(simd_cross(hd, pn))))
-        let rHand = simd_quatf(b1 * b0.transpose)
-
-        // 前腕は手のひねりを引き継ぎつつ、肘→手首へ向ける
-        let foreTwisted = rHand * qFore0
-        let foreDirNow = rHand.act(foreDir0)
-        let qf = simd_quatf(from: foreDirNow, to: simd_normalize(w - elbow)) * foreTwisted
+        arm.simdWorldOrientation = aim(qArm0, armDir0, simd_normalize(elbow - shoulder))
         fore.simdWorldPosition = elbow
-        fore.simdWorldOrientation = qf
-
+        fore.simdWorldOrientation = aim(qFore0, foreDir0, simd_normalize(w - elbow))
         hand.simdWorldPosition = w
-        hand.simdWorldOrientation = rHand * qHand0
+        hand.simdWorldOrientation = aim(qHand0, handDir0, hd)
 
         for f in fingers {
             let c = curl[f.finger] * (f.finger == 4 ? 0.9 : 1.15)
@@ -295,6 +292,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         cameraNode.camera = cam
         cameraNode.position = SCNVector3(0, 0.95, 1.2)
         cameraNode.look(at: SCNVector3(0, -0.25, -2.4))
+        if ProcessInfo.processInfo.arguments.contains("-boothcam") {   // 手元の確認用
+            cameraNode.position = SCNVector3(0, 0.75, 0.85)
+            cameraNode.look(at: SCNVector3(0, 0, -0.1))
+        }
         scene.rootNode.addChildNode(cameraNode)
 
         scene.lightingEnvironment.contents = Self.environmentImage(venue)
@@ -534,7 +535,12 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             let model = SCNNode()
             for c in s.rootNode.childNodes { model.addChildNode(c) }
             model.enumerateHierarchy { node, _ in
-                for m in node.geometry?.materials ?? [] { self.pbr(m, rough: (node.name ?? "").contains("body") ? 0.5 : 0.8) }
+                let isBody = (node.name ?? "").contains("body")
+                for m in node.geometry?.materials ?? [] {
+                    self.pbr(m, rough: isBody ? 0.5 : 0.85)
+                    // 袖は濃い色に（白いと照明で飛ぶ）
+                    if !isBody { m.multiply.contents = cx < 0 ? UIColor(white: 0.12, alpha: 1) : UIColor(red: 0.15, green: 0.18, blue: 0.3, alpha: 1) }
+                }
             }
             scene.rootNode.addChildNode(model)
             // 前を向いた DJ の左手は画面の左（-x）
@@ -563,7 +569,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let key = SCNNode()
         key.light = SCNLight()
         key.light?.type = .spot
-        key.light?.intensity = 650
+        key.light?.intensity = 450
         key.light?.color = UIColor(red: 1, green: 0.92, blue: 0.82, alpha: 1)
         key.light?.spotInnerAngle = 30
         key.light?.spotOuterAngle = 70
