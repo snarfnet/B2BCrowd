@@ -129,6 +129,25 @@ private final class ArmRig {
     var curl: [Float] = [0.5, 0.5, 0.5, 0.5, 0.3]   // 人差し指・中指・薬指・小指・親指
     let shoulder: SIMD3<Float>
     let side: Float            // 体の右側の手なら +1、左側なら -1
+    let sArm: SIMD3<Float>, sFore: SIMD3<Float>, sHand: SIMD3<Float>   // 骨のワールド拡大率（MakeHuman の 0.1 倍など）
+
+    private static func scaleOf(_ n: SCNNode) -> SIMD3<Float> {
+        let m = n.simdWorldTransform
+        return SIMD3(simd_length(SIMD3(m.columns.0.x, m.columns.0.y, m.columns.0.z)),
+                     simd_length(SIMD3(m.columns.1.x, m.columns.1.y, m.columns.1.z)),
+                     simd_length(SIMD3(m.columns.2.x, m.columns.2.y, m.columns.2.z)))
+    }
+
+    /// 拡大率を保ったままワールド位置・向きを決める
+    private func place(_ n: SCNNode, _ p: SIMD3<Float>, _ q: simd_quatf, _ s: SIMD3<Float>) {
+        var m = simd_float4x4(q)
+        m.columns.0 *= s.x
+        m.columns.1 *= s.y
+        m.columns.2 *= s.z
+        m.columns.3 = SIMD4(p.x, p.y, p.z, 1)
+        let parent = n.parent?.simdWorldTransform ?? matrix_identity_float4x4
+        n.simdTransform = parent.inverse * m
+    }
 
     init?(model: SCNNode, prefix: String, shoulder: SIMD3<Float>, side: Float) {
         func n(_ s: String) -> SCNNode? {
@@ -138,6 +157,7 @@ private final class ArmRig {
         guard let a = n("Arm"), let f = n("ForeArm"), let h = n("Hand"),
               let mid = n("HandMiddle1"), let idx = n("HandIndex1"), let pinky = n("HandPinky1") else { return nil }
         arm = a; fore = f; hand = h
+        sArm = Self.scaleOf(a); sFore = Self.scaleOf(f); sHand = Self.scaleOf(h)
         self.shoulder = shoulder
         self.side = side
         qArm0 = a.simdWorldOrientation
@@ -203,12 +223,9 @@ private final class ArmRig {
             let r = frame(y1, pn) * frame(y0, palm0).transpose
             return simd_quatf(r) * q0
         }
-        arm.simdWorldPosition = shoulder
-        arm.simdWorldOrientation = aim(qArm0, armDir0, simd_normalize(elbow - shoulder))
-        fore.simdWorldPosition = elbow
-        fore.simdWorldOrientation = aim(qFore0, foreDir0, simd_normalize(w - elbow))
-        hand.simdWorldPosition = w
-        hand.simdWorldOrientation = aim(qHand0, handDir0, hd)
+        place(arm, shoulder, aim(qArm0, armDir0, simd_normalize(elbow - shoulder)), sArm)
+        place(fore, elbow, aim(qFore0, foreDir0, simd_normalize(w - elbow)), sFore)
+        place(hand, w, aim(qHand0, handDir0, hd), sHand)
 
         for f in fingers {
             let c = curl[f.finger] * (f.finger == 4 ? 0.9 : 1.15)
