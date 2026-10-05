@@ -60,7 +60,11 @@ jobs:
         run session -boothcam; sleep 12; shot 09_booth_a
         sleep 15; shot 10_booth_b
         run result; sleep 125; shot 08_result
-        xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "B2BCrowd"' --style compact > shots/app.log 2>&1 || true
+        xcrun simctl spawn "$UDID" log show --last 15m --predicate 'process == "B2BCrowd"' --style compact > shots/app.log 2>&1 || true
+        mkdir -p shots/crash
+        cp ~/Library/Logs/DiagnosticReports/B2BCrowd* shots/crash/ 2>/dev/null || true
+        find ~/Library/Logs/DiagnosticReports -name "*B2BCrowd*" -newer build.log -exec cp {} shots/crash/ \; 2>/dev/null || true
+        ls shots/crash
 
     - uses: actions/upload-artifact@v4
       if: always()
