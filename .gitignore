@@ -5,3 +5,6 @@ DerivedData/
 .DS_Store
 .omc/
 tools/__pycache__/
+ArtSource/dl/
+ArtSource/out/
+shots*/

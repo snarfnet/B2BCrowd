@@ -1,0 +1,23 @@
+# 観客のバリエーション（全員 MPFB/MakeHuman の CC0 素材から作る）
+VARIANTS = [
+    dict(name="c01", ph=dict(gender=0.0, age=0.45, muscle=0.5, weight=0.45, height=0.45, race=dict(asian=1, caucasian=0, african=0)),
+         skin="young_asian_female", clothes=["female_casualsuit01", "shoes02"], hair="bob01"),
+    dict(name="c02", ph=dict(gender=1.0, age=0.45, muscle=0.6, weight=0.5, height=0.6, race=dict(asian=0, caucasian=1, african=0)),
+         skin="young_caucasian_male", clothes=["male_casualsuit02", "shoes01"], hair="short02"),
+    dict(name="c03", ph=dict(gender=1.0, age=0.45, muscle=0.7, weight=0.5, height=0.65, race=dict(asian=0, caucasian=0, african=1)),
+         skin="young_african_male", clothes=["male_casualsuit04", "shoes03"], hair="short04"),
+    dict(name="c04", ph=dict(gender=1.0, age=0.42, muscle=0.5, weight=0.45, height=0.5, race=dict(asian=1, caucasian=0, african=0)),
+         skin="young_asian_male", clothes=["male_casualsuit01", "shoes06"], hair="short01"),
+    dict(name="c05", ph=dict(gender=0.0, age=0.45, muscle=0.55, weight=0.5, height=0.55, race=dict(asian=0, caucasian=0, african=1)),
+         skin="young_african_female", clothes=["female_sportsuit01", "shoes05"], hair="afro01"),
+    dict(name="c06", ph=dict(gender=0.0, age=0.42, muscle=0.5, weight=0.4, height=0.5, race=dict(asian=0, caucasian=1, african=0)),
+         skin="young_caucasian_female", clothes=["female_casualsuit02", "shoes04"], hair="ponytail01"),
+    dict(name="c07", ph=dict(gender=1.0, age=0.7, muscle=0.4, weight=0.6, height=0.55, race=dict(asian=0, caucasian=1, african=0)),
+         skin="middleage_caucasian_male", clothes=["male_elegantsuit01", "shoes01", "fedora01"], hair="short03"),
+    dict(name="c08", ph=dict(gender=1.0, age=0.95, muscle=0.35, weight=0.45, height=0.4, race=dict(asian=1, caucasian=0, african=0)),
+         skin="old_asian_male", clothes=["male_worksuit01", "shoes03"], hair="short03"),
+    dict(name="c09", ph=dict(gender=0.0, age=0.45, muscle=0.5, weight=0.45, height=0.55, race=dict(asian=1, caucasian=0, african=0)),
+         skin="young_asian_female", clothes=["female_elegantsuit01", "shoes04"], hair="long01"),
+    dict(name="c10", ph=dict(gender=1.0, age=0.5, muscle=0.5, weight=0.55, height=0.55, race=dict(asian=0.5, caucasian=0.5, african=0)),
+         skin="young_caucasian_male2", clothes=["male_casualsuit03", "shoes02"], hair="short01"),
+]

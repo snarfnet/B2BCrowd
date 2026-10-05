@@ -72,16 +72,10 @@ struct SessionView: View {
     // MARK: フロア
 
     private var floor: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .bottom) {
-                CrowdView(energy: game.energy, venue: game.config.venue, reactions: game.reactions,
-                          active: game.phase != .paused, behindBooth: true)
-                Booth3DView(state: boothState)
-                    .frame(height: geo.size.height * 0.62)
-            }
-        }
+        Booth3DView(state: boothState)
+            .overlay { ReactionLayer(reactions: game.reactions) }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 280, maxHeight: 380)
+            .frame(minHeight: 300, maxHeight: 420)
             .layoutPriority(1)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(alignment: .topTrailing) { eventFeed }
@@ -332,6 +326,30 @@ struct SessionView: View {
             .padding(28)
             .frame(maxWidth: 360)
         }
+    }
+}
+
+// 観客の絵文字リアクション（フロアの上に浮かぶ）
+struct ReactionLayer: View {
+    let reactions: [FloatEvent]
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 30)) { ctx in
+            GeometryReader { geo in
+                ForEach(reactions) { r in
+                    let age = ctx.date.timeIntervalSince(r.born)
+                    if age < 2.5 {
+                        let seed = CGFloat(abs(r.id.hashValue % 1000)) / 1000
+                        Text(r.text)
+                            .font(.system(size: 28))
+                            .opacity(max(0, 1 - age / 2.5))
+                            .position(x: geo.size.width * (0.1 + seed * 0.8),
+                                      y: geo.size.height * 0.5 - CGFloat(age) * geo.size.height * 0.18)
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
