@@ -1,0 +1,7 @@
+build/
+shots/
+*.xcodeproj
+DerivedData/
+.DS_Store
+.omc/
+tools/__pycache__/

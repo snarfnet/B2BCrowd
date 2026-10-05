@@ -1,0 +1,125 @@
+B2B CROWD
+iOS B2B DJ選曲ゲーム 完全制作仕様書
+
+【概要】
+2人のDJがApple Musicから1曲ずつ交互に選曲し、仮想クラブの観客を盛り上げるB2B選曲ゲーム。ミックス技術ではなく「次に何をかけるか」をゲーム化する。
+
+【基本フロー】
+DJ A選曲→再生→再生中にDJ Bが次曲を選択→曲終了→DJ B再生→DJ Aが次曲選択。A→B→A→Bを繰り返す。
+
+【Apple Music設計原則】
+MusicKit等Appleが正式提供する仕組みを使用する。Apple Musicモードでは音源抽出、独自保存、独自キャッシュ、波形抽出、FFT解析、リアルタイムビート解析、独自BPM解析、ピッチ変更、タイムストレッチ、スクラッチ、ループ加工、2曲の独自ミックス、録音、DJ MIX書き出しを前提にしない。公開前に最新のDeveloper Program License Agreement、MusicKit条件、App Review Guidelinesを確認する。
+
+【CROWD ENERGY】
+0～100で管理。
+0～20 DEAD FLOOR
+21～40 WARMING UP
+41～60 GOOD VIBE
+61～80 FLOOR IS HOT
+81～99 INSANE
+100 LEGENDARY FLOOR
+
+【観客演出】
+低ENERGY：腕組み、スマホを見る、座る、動きが少ない。
+中ENERGY：体を揺らす、踊る、手拍子。
+高ENERGY：両手を上げる、ジャンプ、歓声、指笛、レーザー。
+100：全体ジャンプ、スマホライト、紙吹雪、巨大歓声、振動、LEGENDARY FLOOR。
+
+【盛り上がり判定】
+Apple Music音源そのものを独自解析しない。選曲時間、テーマ条件、連続成功、観客投票、相手DJのLIKE、利用可能な公式メタデータ、選曲履歴、コンボ、ターン数、重複、PASS、時間切れ等で算出。
+例：初期50、テーマ一致+8、高速選曲+3、観客高評価+10、コンボ+5、LIKE+3、同曲再選択-20、テーマ違反-10、時間切れ-10、PASS-5。
+
+【ゲームモード】
+1. FREE B2B：自由選曲。
+2. GENRE BATTLE：TECHNO、HOUSE、TRANCE、PSYTRANCE、HIP HOP、ROCK、METAL、J-POP、ANIME、DISCO、80s、90s等。
+3. THEME BATTLE：夜、夏、冬、失恋、宇宙、雨、ドライブ、ラスボス感等。
+4. DJ SHIRITORI：前曲から連想した曲を返し、LIKEや観客評価で採点。
+5. SECRET TRACK：次曲を相手に隠し、切替時にNEXT TRACK!とジャケットを大表示。
+6. TIME ATTACK：60/45/30/15秒等で次曲を決定。
+7. SURVIVAL：ENERGY 0でFLOOR EMPTY / GAME OVER。
+8. 100% CHALLENGE：ENERGY 100でLEGENDARY FLOOR。
+
+【スコア】
+Selection / Flow / Speed / Crowd / TOTALを表示。高評価連続でCOMBO。10 COMBO等で専用演出。
+
+【観客参加】
+将来、別端末から🔥❤️👏😐👎等を送信可能にする。4桁PARTY CODEまたはQR参加。リアル観客評価とゲームロジックを混合可能。
+
+【AI CROWD】
+初期版は生成AI不要。選曲履歴、スコア、コンボ、ターン、投票、テーマ条件、イベントを入力し、ENERGY、観客アニメーション、歓声、照明、特殊演出をルールベースで決定。
+
+【観客キャラクター】
+クラバー、学生、会社員、ダンサー、サイバー系、テクノファン、ロックファン、観光客風、謎の老人、踊らない評論家等。特殊観客として伝説のクラバー、絶対踊らない男、何でも盛り上がる人、辛口評論家、ダンスキング等。
+
+【会場】
+SMALL CLUB / UNDERGROUND / WAREHOUSE / ROOFTOP / BEACH / TOKYO NIGHT / CYBER CLUB / MEGA FESTIVAL / SPACE CLUB。実在クラブの商標・ロゴ・特徴的内装を無断模倣しない。
+
+【DJプロフィール】
+DJ NAME、アイコン、LEVEL、総セッション数、最高ENERGY、最高COMBO、好きなジャンル、称号、実績。称号例：BEGINNER DJ、SELECTOR、FLOOR MAKER、B2B MASTER、CROWD MASTER、FLOOR LEGEND。
+
+【MusicKit機能】
+Apple Musicアクセス許可、楽曲・アーティスト・アルバム検索、利用可能な範囲のライブラリ表示、再生、現在曲情報、アートワーク、再生状態、正式APIで取得可能な再生位置等。Apple Music利用不可でもアプリ自体は起動可能にする。
+
+【NEXT TRACK】
+検索結果から次曲を1曲予約。開始前なら変更可能。SECRET TRACK時は曲名・アーティスト・ジャケットを相手に隠す。
+
+【曲切替】
+現在曲→終了→NEXT TRACK演出→次曲。Apple Music音源同士をアプリ独自に重ねるクロスフェードを前提にしない。正式APIで可能なら終盤カウントダウンを表示。
+
+【DJ風UI】
+回転レコード風UI、装飾的VUメーター、レーザー、照明、観客、NEXT TRACK、DJ NAME、大型LED風画面、ターン、COMBO。音声を実測していない装飾表示を実波形・実周波数解析と誤認させない。
+
+【LOCAL DJ MODE】
+Apple Musicと完全分離。ユーザー自身が権利を持つ、または適切な利用許諾を受けたローカル音源のみ対象。将来候補：Deck A/B、Waveform、BPM、CUE、LOOP、EQ、Pitch、Crossfader、Scratch。Apple Musicストリーミング音源をこのモードへ渡せない構造にする。
+
+【YouTube】
+DJ音源取得元として扱わない。音声抽出、無断ダウンロード、音声保存、音声のみのDeck投入、BPM変更、スクラッチ、別曲との独自ミックスを避ける。導入する場合は最新の公式API/Player条件に従い、MV視聴、曲発見、関連動画等に限定する。
+
+【オンラインB2B】
+将来候補。Apple Music音源そのものをユーザー間転送せず、選曲情報、ターン、スコア、ENERGY、リアクション、ゲーム状態を同期。楽曲は各端末で正式なApple Music機能から再生する構造を検討。
+
+【セッション設定】
+DJ A NAME / DJ B NAME / MODE / SESSION LENGTH（5・10・20 TRACKS・ENDLESS）/ SECRET TRACK ON-OFF / CROWD AI-PLAYER-MIX。
+
+【リザルト】
+DJ A SCORE、DJ B SCORE、MAX CROWD ENERGY、MAX COMBO、BEST ROUND、TOTAL TRACKS、称号。曲音源を含まないシェアカードを生成可能。
+
+【状態管理】
+idle / requestingMusicAuthorization / lobby / searchingTrack / trackSelected / playing / waitingForNextDJ / countdown / transition / result / paused / error。音楽再生状態とゲーム状態を分離する。
+
+【エラー処理】
+Apple Musicアクセス拒否、ネット切断、再生不可、地域制限、カタログ削除、MusicKitエラー、次曲未選択、バックグラウンド移行、着信等のAudio Session中断からゲーム状態を壊さず復帰。
+
+【プライバシー】
+不要な個人情報を収集しない。使用しない権限を要求しない。初期版では端末マイクによる実観客の歓声解析を行わない。
+
+【MVP】
+1 Apple Music認証
+2 MusicKit曲検索
+3 1曲再生
+4 DJ A/Bターン管理
+5 NEXT TRACK
+6 CROWD ENERGY
+7 5段階観客アニメーション
+8 FREE B2B
+9 TIME ATTACK
+10 SECRET TRACK
+11 スコア
+12 リザルト
+
+【開発順】
+Phase 1 MusicKit再生検証
+Phase 2 B2Bターン
+Phase 3 CROWD ENERGY
+Phase 4 観客アニメーション
+Phase 5 ゲームモード
+Phase 6 演出・SE
+Phase 7 実機テスト
+Phase 8 最新規約・App Store審査確認
+Phase 9 TestFlight
+Phase 10 公開
+
+【本アプリの核心】
+Aが曲を出す。Bがそれに曲で返す。観客が反応する。さらにAが返す。
+「選曲だけでフロアを100%まで沸かせる」ことをゲーム化する。
+普通のApple Musicプレイヤーでも本格DJミキサーでもない「2人で遊ぶB2B選曲ゲーム」を目指す。

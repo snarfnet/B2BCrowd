@@ -1,0 +1,36 @@
+name: Build check
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Select Xcode
+      run: |
+        XCODE_APP=$(ls /Applications/ | grep "^Xcode_" | sort -V | tail -1)
+        sudo xcode-select -s "/Applications/$XCODE_APP"
+        xcodebuild -version
+
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
+    - name: Generate Xcode project
+      run: xcodegen generate
+
+    - name: Build for Simulator
+      run: |
+        set -o pipefail
+        xcodebuild build \
+          -scheme B2BCrowd \
+          -configuration Debug \
+          -sdk iphonesimulator \
+          -destination "generic/platform=iOS Simulator" \
+          -derivedDataPath build/sim \
+          CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" || true
+        grep -q "BUILD SUCCEEDED" build.log
