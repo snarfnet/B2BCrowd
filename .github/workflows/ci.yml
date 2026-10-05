@@ -20,6 +20,13 @@ jobs:
     - name: Install XcodeGen
       run: brew install xcodegen
 
+    - name: Write Audius API key
+      env:
+        AUDIUS_API_KEY: ${{ secrets.AUDIUS_API_KEY }}
+      run: |
+        if [ -n "$AUDIUS_API_KEY" ]; then printf 'AUDIUS_API_KEY = %s
+' "$AUDIUS_API_KEY" > Config/Secrets.xcconfig; fi
+
     - name: Generate Xcode project
       run: xcodegen generate
 

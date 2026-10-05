@@ -30,6 +30,8 @@ API キーが無くても `app_name=B2BCrowd` を付けて読み取り専用で�
 4. `xcodegen generate` し直してビルドする。
 
 - `Config/Secrets.xcconfig` は `.gitignore` 済みです。コミットしないでください。
+- GitHub Actions では、リポジトリの Secret `AUDIUS_API_KEY` から `Config/Secrets.xcconfig` を作ってビルドします。
+- 発行済みキー: Audius アカウント @snarfnet の「B2B CROWD」（2026-10-06、Free プラン）。管理は https://api.audius.co/plans
 - Audius から一緒に渡される **Bearer Token / API Secret はアプリに入れません**（Audius の指示でサーバー専用）。このアプリは読み取りと再生だけなので不要です。
 - キーは `Info.plist` の `AudiusAPIKey` 経由で読み、全リクエストのクエリに `api_key` を付けます（公式 SDK と同じ方式）。キーが空なら `app_name` を付けます。
 
