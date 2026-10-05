@@ -381,6 +381,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     /// 読み込みと組み立ては必ずこの1本の列で行う（同じ型紙を同時に複製すると SceneKit が落ちる）
     static let buildQueue = DispatchQueue(label: "club.build", qos: .userInitiated)
 
+    static let debugTilt = ProcessInfo.processInfo.arguments.contains("-shot")
+
     static let nearNames = ["c01", "c02", "c03", "c05", "c06", "c09", "c12", "c16"]
 
     /// アプリ起動時に人物を先に読んでおく（起動の邪魔をしないよう少し待ってから）
@@ -1199,6 +1201,14 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                     q = simd_slerp(b.bind * pqs[pf], q, p.blend)
                 }
                 b.node.simdOrientation = q
+            }
+            if Self.debugTilt, let h = p.hips, Int(t * 2) != Int((t - dt) * 2) {
+                let up = h.simdWorldOrientation.act(SIMD3<Float>(0, 1, 0))
+                let tilt = acos(max(-1, min(1, up.y))) * 180 / .pi
+                if tilt > 40 {
+                    NSLog("TILT %.0f clip=%@ prev=%@ blend=%.2f node=%@ special=%d", tilt, p.clip, p.prevClip ?? "-", p.blend,
+                          p.root.childNodes.first?.name ?? "?", p.special)
+                }
             }
             if let h = p.hips, f < c.hips.count {
                 var off = c.hips[f]
