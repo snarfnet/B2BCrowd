@@ -478,7 +478,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         scene.rootNode.addChildNode(wall)
         let led = SCNNode(geometry: SCNPlane(width: 12, height: 4.5))
         led.position = SCNVector3(0, 2.4, -13.9)
-        led.geometry?.materials = [vjMaterial(aspect: 12 / 4.5)]
+        led.geometry?.materials = [vjMaterial(aspect: 12 / 4.5, gain: 1.9)]
         scene.rootNode.addChildNode(led)
         ledWall = led
         _ = top
@@ -487,7 +487,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             let side = SCNNode(geometry: SCNPlane(width: 2.6, height: 4.4))
             side.position = SCNVector3(sx * 6.4, 2.3, -8.5)
             side.eulerAngles.y = -sx * 0.55
-            side.geometry?.materials = [vjMaterial(aspect: 2.6 / 4.4)]
+            side.geometry?.materials = [vjMaterial(aspect: 2.6 / 4.4, gain: 1.4)]
             scene.rootNode.addChildNode(side)
             // 枠
             let frame = SCNNode(geometry: SCNBox(width: 2.75, height: 4.55, length: 0.08, chamferRadius: 0.02))
@@ -670,7 +670,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                     robotMaterial(m, mn)
                     continue
                 }
-                pbrS(m, rough: isSkin ? 0.5 : 0.75)
+                pbrS(m, rough: isSkin ? 0.7 : 0.88)
+                // 人は周囲の映り込み（IBL の鏡面）を弱めてテカテカを抑える
+                m.ambientOcclusion.contents = UIColor(white: 0.7, alpha: 1)
                 if isSkin { skinMaterial(m) }
                 else if lname.contains("low-poly") {
                     // The existing eye atlas stays intact; corneal sheen is restrained.
@@ -1506,7 +1508,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     // MARK: VJ
 
     /// GPU で映像を描く素材。種類・速さ・色は uniform で変える
-    private func vjMaterial(aspect: Float) -> SCNMaterial {
+    private func vjMaterial(aspect: Float, gain: Float = 1) -> SCNMaterial {
         let m = SCNMaterial()
         m.lightingModel = .constant
         m.isDoubleSided = false
@@ -1515,6 +1517,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         m.diffuse.contents = fallback
         m.shaderModifiers = [.surface: Self.vjShader]
         m.setValue(NSNumber(value: aspect), forKey: "vjAspect")
+        m.setValue(NSNumber(value: gain), forKey: "vjGain")
         m.setValue(NSNumber(value: Float(0)), forKey: "vjTime")
         m.setValue(NSNumber(value: Float(0.5)), forKey: "vjEnergy")
         m.setValue(NSNumber(value: Float(0)), forKey: "vjMode")
@@ -1531,6 +1534,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private static let vjShader = """
     #pragma arguments
     float vjAspect;
+    float vjGain;
     float vjTime;
     float vjEnergy;
     float vjMode;
@@ -1591,8 +1595,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     float detail = 1.0 - saturate(length(fwidth(uv)) * 144.0);
     col *= mix(1.0, 0.78 + 0.22 * pixels, detail);
     col += mix(vjColA, vjColB, 0.5) * vjCut * 0.16;
-    col *= (0.32 + 0.62 * e) * vjOn;
-    _surface.diffuse = float4(col, 1.0);
+    // 奥は霧で沈むので画面ごとの明るさ（vjGain）で持ち上げる。1 を超えた分は発光にしてブルームに乗せる
+    col *= (0.55 + 0.75 * e) * vjGain * vjOn;
+    _surface.diffuse = float4(min(col, float3(1.0)), 1.0);
+    _surface.emission = float4(max(col - 1.0, float3(0.0)), 1.0);
     """
 
     /// 曲が変わったら絵・文字・色を入れ替え、AUTO なら映像の種類も切り替える

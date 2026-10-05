@@ -127,8 +127,8 @@ def generate(out):
     weave = np.sin(u * math.tau * 64) * .20 + np.sin(v * math.tau * 64) * .18
     weave += np.sin((u + v) * math.tau * 32) * .07
     png(out / 'fabric_detail_normal.png', normal(weave, .22))
-    png(out / 'fabric_detail_rough.png', .79 + field(u, v, 21) * .075)
-    png(out / 'hair_detail_rough.png', .49 + field(u, v, 37) * .065 + np.sin(u * math.tau * 58) * .04)
+    png(out / 'fabric_detail_rough.png', .87 + field(u, v, 21) * .06)
+    png(out / 'hair_detail_rough.png', .64 + field(u, v, 37) * .06 + np.sin(u * math.tau * 58) * .035)
     # The inspected male/female MakeHuman textures share this atlas layout.
     # Colour is retained from their original complexion, age and lip textures.
     u, v = grid(512)
@@ -138,14 +138,14 @@ def generate(out):
     lip = oval(u, row, .910, .520, .012, .017)
     cheeks = oval(u, row, .863, .463, .023, .036) + oval(u, row, .864, .584, .023, .036)
     hands = oval(u, row, .47, .930, .067, .040) + oval(u, row, .651, .929, .071, .040)
-    zones = .55 + field(u, v, 81) * .014 - forehead * .15 - nose * .19 - lip * .22 - cheeks * .035 - hands * .075
+    zones = .74 + field(u, v, 81) * .014 - forehead * .09 - nose * .12 - lip * .16 - cheeks * .02 - hands * .04
     png(out / 'skin_zone_rough.png', zones)
     colour = np.ones((*u.shape, 3)) * .994
     colour += field(u, v, 83)[..., None] * .0025
     colour[..., 1] -= cheeks * .016
     colour[..., 2] -= cheeks * .019
     png(out / 'skin_zone_multiply.png', colour ** (1 / 2.2))
-    report['skin'] = {'rough_min':float(zones.min()),'rough_max':float(zones.max()),'forehead':.40,'nose':.36,'lips':.33,'body':.55}
+    report['skin'] = {'rough_min':float(zones.min()),'rough_max':float(zones.max()),'forehead':.65,'nose':.62,'lips':.58,'body':.74}
     files = sorted(out.glob('*.png'))
     report['files'] = [{'name':p.name, 'bytes':p.stat().st_size} for p in files]
     report['encoded_bytes'] = sum(p.stat().st_size for p in files)
