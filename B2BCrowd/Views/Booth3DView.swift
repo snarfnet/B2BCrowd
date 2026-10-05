@@ -19,11 +19,12 @@ struct BoothState: Equatable {
     var characters: [String] = ["c09", "c02"]
     var vjMode: VJMode = .auto
     var djName: String = ""
+    var reactions: [(id: UUID, text: String)] = []   // 観客の反応（フロアのパーティクル演出になる）
 
     static func == (l: BoothState, r: BoothState) -> Bool {
         l.owner == r.owner && l.currentID == r.currentID && l.nextID == r.nextID && l.nextHidden == r.nextHidden
             && l.phase == r.phase && l.selector == r.selector && l.energy == r.energy && l.venue == r.venue
-            && l.vjMode == r.vjMode
+            && l.vjMode == r.vjMode && l.reactions.last?.id == r.reactions.last?.id
     }
 }
 
@@ -309,6 +310,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var confetti: SCNParticleSystem?
     private var ledWall: SCNNode?
     private var hazes: [SCNNode] = []
+    private var seenReactions = Set<UUID>()
+    private let fxLight = SCNNode()
+    private var fxFlash: Float = 0
     // VJ 卓（フロア左手前の台の上）
     private let vjDesk = SIMD3<Float>(-2.6, 0.22, -3.25)   // 卓の天板の中心
     private var laptopMat: SCNMaterial?
@@ -1115,6 +1119,15 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
 
 
+        // 反応の演出で一瞬光るライト
+        fxLight.light = SCNLight()
+        fxLight.light?.type = .omni
+        fxLight.light?.intensity = 0
+        fxLight.light?.attenuationStartDistance = 1
+        fxLight.light?.attenuationEndDistance = 9
+        fxLight.position = SCNVector3(0, 1.2, -3.8)
+        scene.rootNode.addChildNode(fxLight)
+
         // 紙吹雪（LEGENDARY のときだけ）
         let ps = SCNParticleSystem()
         ps.birthRate = 0
@@ -1159,6 +1172,166 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         smoke = sm
     }
 
+    // MARK: 観客の反応 → パーティクル演出
+
+    private static let puffImg = puffImage()
+    private static let sparkImg: UIImage = {
+        let s: CGFloat = 64
+        return UIGraphicsImageRenderer(size: CGSize(width: s, height: s)).image { ctx in
+            let g = CGGradient(colorsSpace: nil, colors: [UIColor.white.cgColor, UIColor(white: 1, alpha: 0.55).cgColor, UIColor(white: 1, alpha: 0).cgColor] as CFArray, locations: [0, 0.18, 1])!
+            ctx.cgContext.drawRadialGradient(g, startCenter: CGPoint(x: s / 2, y: s / 2), startRadius: 0, endCenter: CGPoint(x: s / 2, y: s / 2), endRadius: s / 2, options: [])
+        }
+    }()
+
+    @MainActor
+    private func fireReaction(_ r: Reaction) {
+        func flash(_ c: UIColor, _ amount: Float) {
+            fxLight.light?.color = c
+            lock.lock(); fxFlash = max(fxFlash, amount); lock.unlock()
+        }
+        switch r {
+        case .fire:
+            // ステージ前の炎の柱＋火花
+            let x = Float.random(in: 1.3...1.9)
+            for sx in [-x, x] {
+                burst(Self.flameJet(), at: SCNVector3(sx, -1.0, -3.0))
+                burst(Self.sparks(UIColor(red: 1, green: 0.7, blue: 0.25, alpha: 1)), at: SCNVector3(sx, -0.6, -3.0))
+            }
+            flash(UIColor(red: 1, green: 0.5, blue: 0.15, alpha: 1), 1)
+        case .heart:
+            // フロアの上で弾けるピンクのきらめき
+            let p = SCNVector3(Float.random(in: -1.2...1.2), Float.random(in: 1.1...1.8), Float.random(in: -5.5 ... -3.8))
+            burst(Self.sparkleBurst(UIColor(red: 1, green: 0.3, blue: 0.6, alpha: 1)), at: p)
+            burst(Self.sparkleBurst(UIColor(red: 1, green: 0.75, blue: 0.9, alpha: 1), small: true), at: p)
+            flash(UIColor(red: 1, green: 0.3, blue: 0.65, alpha: 1), 0.6)
+        case .clap:
+            // 左右から紙吹雪の大砲
+            for sx: Float in [-2.3, 2.3] {
+                burst(Self.confettiCannon(toward: -sx), at: SCNVector3(sx, -0.8, -3.3))
+            }
+            flash(UIColor(white: 1, alpha: 1), 0.45)
+        case .meh:
+            burst(Self.dustPuff(UIColor(white: 0.7, alpha: 0.12)), at: SCNVector3(Float.random(in: -1...1), -0.9, -4.2))
+        case .boo:
+            burst(Self.dustPuff(UIColor(red: 0.35, green: 0.45, blue: 0.8, alpha: 0.16)), at: SCNVector3(Float.random(in: -1...1), -0.9, -4.0))
+            flash(UIColor(red: 0.2, green: 0.3, blue: 1, alpha: 1), 0.25)
+        }
+    }
+
+    @MainActor
+    private func burst(_ ps: SCNParticleSystem, at p: SCNVector3) {
+        let n = SCNNode()
+        n.position = p
+        scene.rootNode.addChildNode(n)
+        n.addParticleSystem(ps)
+        let life = Double(ps.emissionDuration + ps.particleLifeSpan + ps.particleLifeSpanVariation) + 0.3
+        n.runAction(.sequence([.wait(duration: life), .removeFromParentNode()]))
+    }
+
+    private static func oneShot(_ count: CGFloat, over duration: CGFloat) -> SCNParticleSystem {
+        let ps = SCNParticleSystem()
+        ps.loops = false
+        ps.emissionDuration = duration
+        ps.birthRate = count / duration
+        ps.isLightingEnabled = false
+        ps.blendMode = .additive
+        ps.emittingDirection = SCNVector3(0, 1, 0)
+        return ps
+    }
+
+    private static func fade(_ ps: SCNParticleSystem, _ colors: [UIColor], sizes: [CGFloat]? = nil) {
+        let c = CAKeyframeAnimation()
+        c.values = colors
+        var ctl: [SCNParticleSystem.ParticleProperty: SCNParticlePropertyController] = [.color: SCNParticlePropertyController(animation: c)]
+        if let sizes {
+            let s = CAKeyframeAnimation()
+            s.values = sizes
+            ctl[.size] = SCNParticlePropertyController(animation: s)
+        }
+        ps.propertyControllers = ctl
+    }
+
+    private static func flameJet() -> SCNParticleSystem {
+        let ps = oneShot(260, over: 0.45)
+        ps.particleImage = puffImg
+        ps.particleLifeSpan = 0.6
+        ps.particleLifeSpanVariation = 0.2
+        ps.particleVelocity = 5.2
+        ps.particleVelocityVariation = 1.2
+        ps.spreadingAngle = 6
+        ps.acceleration = SCNVector3(0, 1.5, 0)
+        ps.particleSize = 0.2
+        ps.emitterShape = SCNSphere(radius: 0.06)
+        fade(ps, [UIColor(red: 1, green: 0.95, blue: 0.75, alpha: 1), UIColor(red: 1, green: 0.55, blue: 0.12, alpha: 0.9),
+                  UIColor(red: 0.8, green: 0.15, blue: 0.03, alpha: 0.5), UIColor(red: 0.2, green: 0.02, blue: 0, alpha: 0)],
+             sizes: [0.12, 0.3, 0.5, 0.7])
+        return ps
+    }
+
+    private static func sparks(_ color: UIColor) -> SCNParticleSystem {
+        let ps = oneShot(160, over: 0.25)
+        ps.particleImage = sparkImg
+        ps.particleLifeSpan = 1.1
+        ps.particleLifeSpanVariation = 0.4
+        ps.particleVelocity = 4.5
+        ps.particleVelocityVariation = 2
+        ps.spreadingAngle = 35
+        ps.acceleration = SCNVector3(0, -5, 0)
+        ps.particleSize = 0.03
+        ps.stretchFactor = 0.05
+        fade(ps, [UIColor.white, color, color.withAlphaComponent(0)])
+        return ps
+    }
+
+    private static func sparkleBurst(_ color: UIColor, small: Bool = false) -> SCNParticleSystem {
+        let ps = oneShot(small ? 120 : 260, over: 0.08)
+        ps.particleImage = sparkImg
+        ps.particleLifeSpan = small ? 1.0 : 1.7
+        ps.particleLifeSpanVariation = 0.5
+        ps.particleVelocity = small ? 1.0 : 2.2
+        ps.particleVelocityVariation = 0.8
+        ps.spreadingAngle = 180
+        ps.dampingFactor = 1.6
+        ps.acceleration = SCNVector3(0, -0.7, 0)
+        ps.particleSize = small ? 0.07 : 0.045
+        ps.particleSizeVariation = 0.02
+        fade(ps, [UIColor.white, color, color, color.withAlphaComponent(0)])
+        return ps
+    }
+
+    private static func confettiCannon(toward dir: Float) -> SCNParticleSystem {
+        let ps = oneShot(320, over: 0.25)
+        ps.blendMode = .alpha
+        ps.emittingDirection = SCNVector3(dir * 0.16, 1, -0.1)
+        ps.spreadingAngle = 16
+        ps.particleLifeSpan = 3
+        ps.particleLifeSpanVariation = 1
+        ps.particleVelocity = 6.5
+        ps.particleVelocityVariation = 2
+        ps.dampingFactor = 1.4
+        ps.acceleration = SCNVector3(0, -2.2, 0)
+        ps.particleSize = 0.04
+        ps.particleSizeVariation = 0.015
+        ps.particleAngularVelocity = 500
+        ps.particleAngularVelocityVariation = 400
+        ps.particleColor = UIColor(red: 1, green: 0.85, blue: 0.2, alpha: 1)
+        ps.particleColorVariation = SCNVector4(1, 0.4, 0.15, 0)
+        return ps
+    }
+
+    private static func dustPuff(_ color: UIColor) -> SCNParticleSystem {
+        let ps = oneShot(18, over: 0.3)
+        ps.blendMode = .alpha
+        ps.particleImage = puffImg
+        ps.particleLifeSpan = 2.2
+        ps.particleVelocity = 0.4
+        ps.spreadingAngle = 70
+        ps.particleSize = 0.5
+        ps.particleSizeVariation = 0.2
+        fade(ps, [color, color.withAlphaComponent(0)], sizes: [0.4, 1.0])
+        return ps
+    }
+
     private static func puffImage() -> UIImage {
         let s: CGFloat = 128
         return UIGraphicsImageRenderer(size: CGSize(width: s, height: s)).image { ctx in
@@ -1185,6 +1358,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
         if prev?.currentID != s.currentID || prev?.vjMode != s.vjMode { updateVJTrack(s) }
         if prev?.energy != s.energy { updateMeters(s.energy) }
+        for r in s.reactions where !seenReactions.contains(r.id) {
+            seenReactions.insert(r.id)
+            if let kind = Reaction(rawValue: r.text) { fireReaction(kind) }
+        }
+        if seenReactions.count > 200 { seenReactions = Set(s.reactions.map { $0.id }) }
     }
 
     private func isLive(_ p: GameEngine.Phase) -> Bool { p == .playing || p == .countdown }
@@ -1318,6 +1496,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             * simd_quatf(angle: sin(t * 0.29 + 1) * 0.008, axis: SIMD3<Float>(0, 1, 0))
         cameraNode.simdOrientation = camBase * sway
         smoke?.birthRate = energy > 70 ? CGFloat((energy - 70) / 30 * 6) : 0
+        lock.lock(); fxFlash *= expf(-dt * 4.5); let fl = fxFlash; lock.unlock()
+        fxLight.light?.intensity = CGFloat(fl * 1400)
     }
 
     private func clipFor(_ p: Person, energy: Double) -> String {
