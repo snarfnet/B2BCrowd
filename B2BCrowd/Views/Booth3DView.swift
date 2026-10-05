@@ -1203,7 +1203,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 b.node.simdOrientation = q
             }
             if Self.debugTilt, let h = p.hips, Int(t * 2) != Int((t - dt) * 2) {
-                let up = h.simdWorldOrientation.act(SIMD3<Float>(0, 1, 0))
+                // 休止姿勢で真上を向く腰ローカルの軸が、今どれだけ傾いたか
+                let parentW = h.parent?.simdWorldOrientation ?? simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
+                let bindW = parentW * (p.bones.first { $0.name == "mixamorig:Hips" }?.bind ?? h.simdOrientation)
+                let upLocal = bindW.inverse.act(SIMD3<Float>(0, 1, 0))
+                let up = h.simdWorldOrientation.act(upLocal)
                 let tilt = acos(max(-1, min(1, up.y))) * 180 / .pi
                 if tilt > 40 {
                     NSLog("TILT %.0f clip=%@ prev=%@ blend=%.2f node=%@ special=%d", tilt, p.clip, p.prevClip ?? "-", p.blend,
