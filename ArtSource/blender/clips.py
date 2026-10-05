@@ -5,6 +5,17 @@ import sys, os, bpy, json, math
 from mathutils import Vector, Matrix, Quaternion
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mh_common as mh
+import mocap
+MOCAP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mocap")
+# 名前: (BVH, 開始秒, 長さ秒)
+MOCAP = {
+    "dance_twist": ("141_12.bvh", 0.4, 3.6),
+    "dance_a": ("111_05.bvh", 1.0, 5.0),
+    "dance_b": ("113_04.bvh", 1.0, 5.0),
+    "macarena": ("143_35.bvh", 1.0, 8.0),
+    "jump_mc": ("49_02.bvh", 1.0, 4.0),
+    "mickey": ("120_05.bvh", 1.0, 6.0),
+}
 
 FPS = 30
 P = "mixamorig:"
@@ -110,11 +121,27 @@ ORDER = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head",
          "LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand", "RightShoulder", "RightArm", "RightForeArm", "RightHand",
          "LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot"]
 
+_side_local = {}
+
+def side_ref(rig):
+    """腰と胸の「左右」の向きを骨ローカルで覚えておく（休止姿勢）"""
+    if _side_local:
+        return _side_local
+    bones = rig.data.bones
+    for n, (l, r) in {"Hips": ("LeftUpLeg", "RightUpLeg"), "Spine2": ("LeftArm", "RightArm")}.items():
+        side = (bones[P + l].head_local - bones[P + r].head_local).normalized()
+        _side_local[n] = bones[P + n].matrix_local.to_3x3().inverted() @ side
+    return _side_local
+
 def solve(rig, pose):
+    sides = side_ref(rig)
     for n in ORDER:
         pb = rig.pose.bones[P + n]
         pb.rotation_mode = "QUATERNION"
         pb.rotation_quaternion = Quaternion()
+        pb.scale = (1, 1, 1)
+        if n != "Hips":
+            pb.location = (0, 0, 0)
     bpy.context.view_layer.update()
     for n in ORDER:
         if n not in pose:
@@ -124,7 +151,18 @@ def solve(rig, pose):
         y = M.to_3x3().col[1].normalized()
         q = y.rotation_difference(pose[n])
         R = q.to_matrix() @ M.to_3x3()
+        key = "__side_" + n
+        if key in pose and n in sides:
+            yv = pose[n]
+            cur = (R @ sides[n])
+            tgt = pose[key]
+            cur = (cur - yv * cur.dot(yv)).normalized()
+            tgt = (tgt - yv * tgt.dot(yv)).normalized()
+            ang = math.atan2(yv.dot(cur.cross(tgt)), cur.dot(tgt))
+            R = Quaternion(yv, ang).to_matrix() @ R
+        R = R.to_quaternion().normalized().to_matrix()
         pb.matrix = Matrix.Translation(M.translation) @ R.to_4x4()
+        pb.scale = (1, 1, 1)
         bpy.context.view_layer.update()
     return {n: tuple(rig.pose.bones[P + n].rotation_quaternion) for n in ORDER}
 
@@ -156,6 +194,29 @@ def build(out_path, preview_dir=None):
                 bones[P + b] += [round(x, 4), round(y, 4), round(z, 4), round(w, 4)]
             hips += [round(v, 4) for v in hip]
         data["clips"][name] = {"frames": n, "bones": bones, "hips": hips}
+    for name, (bvh, st, ln) in MOCAP.items():
+        frames = mocap.clip(os.path.join(MOCAP_DIR, bvh), st, ln, fps=FPS)
+        bones = {P + b: [] for b in ORDER}
+        hips = []
+        for fr in frames:
+            pose = {k: Vector(v) for k, v in fr["dirs"].items()}
+            pose["Hips"] = Vector(fr["hip_up"])
+            pose["__side_Hips"] = Vector(fr["hip_side"])
+            pose["__side_Spine2"] = Vector(fr["chest_side"])
+            rots = solve(rig, pose)
+            for b in ORDER:
+                w, x, y, z = rots[b]
+                bones[P + b] += [round(x, 4), round(y, 4), round(z, 4), round(w, 4)]
+            hips += [round(float(v), 4) for v in fr["hips"]]
+        data["clips"][name] = {"frames": len(frames), "bones": bones, "hips": hips}
+        print("MOCAP", name, len(frames))
+        if preview_dir:
+            for q in (0.25, 0.6):
+                fr = frames[int(len(frames) * q)]
+                pose = {k: Vector(v) for k, v in fr["dirs"].items()}
+                pose["Hips"] = Vector(fr["hip_up"]); pose["__side_Hips"] = Vector(fr["hip_side"]); pose["__side_Spine2"] = Vector(fr["chest_side"])
+                solve(rig, pose)
+                mh_preview_pose(rig, os.path.join(preview_dir, f"mc_{name}_{int(q * 100)}.png"), tuple(fr["hips"]))
         if preview_dir:
             pose, hip = sample(keys, dur / 2)
             solve(rig, pose)

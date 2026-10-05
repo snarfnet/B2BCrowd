@@ -103,6 +103,7 @@ private final class Person {
     var phase: Float
     var speed: Float
     let bias: Double
+    var phoneLight: SCNNode?
     let special: Int          // 0 普通 / 1 絶対踊らない / 2 辛口評論家 / 3 何でも盛り上がる / 4 ダンスキング / 5 伝説
     let phoneUser: Bool
 
@@ -264,6 +265,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var hazes: [SCNNode] = []
 
     private var lastTime: TimeInterval = 0
+    private var camBase = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
+    private var smoke: SCNParticleSystem?
     private var artCache: [String: UIImage] = [:]
     private var loading: Set<String> = []
     private var lastApplied: BoothState?
@@ -290,13 +293,20 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         cam.screenSpaceAmbientOcclusionIntensity = 0.7
         cam.exposureOffset = -0.1
         cam.saturation = 1.08
+        cam.wantsDepthOfField = true
+        cam.focusDistance = 2.6
+        cam.fStop = 4.5
+        cam.apertureBladeCount = 6
+        cam.motionBlurIntensity = 0.25
         cameraNode.camera = cam
         cameraNode.position = SCNVector3(0, 1.3, 1.45)
         cameraNode.look(at: SCNVector3(0, -0.3, -1.9))
+        camBase = cameraNode.simdOrientation
         if ProcessInfo.processInfo.arguments.contains("-boothcam") {   // 手元の確認用
             cameraNode.position = SCNVector3(0.1, 0.95, 1.1)
             cameraNode.look(at: SCNVector3(0, 0, -0.1))
         }
+        camBase = cameraNode.simdOrientation
         scene.rootNode.addChildNode(cameraNode)
 
         scene.lightingEnvironment.contents = Self.environmentImage(venue)
@@ -326,14 +336,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
     }
 
-    /// アプリ起動時に人物を先に読んでおく
+    static let nearNames = ["c01", "c02", "c03", "c05", "c06", "c09", "c12", "c16"]
+
+    /// アプリ起動時に人物を先に読んでおく（起動の邪魔をしないよう少し待ってから）
     static func preload() {
-        DispatchQueue.global(qos: .utility).async {
-            for i in 1...18 {
-                let n = String(format: "c%02d", i)
-                _ = template(n, lod: false)
-                _ = template(n, lod: true)
-            }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1.5) {
+            for n in nearNames { _ = template(n, lod: false) }
+            for i in 1...18 { _ = template(String(format: "c%02d", i), lod: true) }
         }
     }
 
@@ -572,8 +581,15 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     private func buildCrowd(into parent: SCNNode) -> [Person] {
         var people: [Person] = []
+        let phoneMat = SCNMaterial()
+        phoneMat.lightingModel = .constant
+        phoneMat.diffuse.contents = UIColor.white
+        phoneMat.emission.contents = UIColor(red: 0.9, green: 0.95, blue: 1, alpha: 1)
+        phoneMat.emission.intensity = 2.5
+        phoneMat.isDoubleSided = true
         let names = (1...18).map { String(format: "c%02d", $0) }
-        let near = names.compactMap { loadCharacter($0) }
+        // 手前の数列だけ精細な版、それ以外は軽い版（読み込みと描画を軽く）
+        let near = Self.nearNames.compactMap { loadCharacter($0) }
         let far = names.compactMap { loadCharacter($0, lod: true) }
         guard !near.isEmpty else { return [] }
         let count = min(96, venue.crowdSize * 2 + 20)
@@ -600,7 +616,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 if placed.allSatisfy({ simd_distance($0, pos) > 0.52 }) { break }
             }
             placed.append(pos)
-            let useFar = -pos.y > 5.5 && !far.isEmpty
+            let useFar = -pos.y > 4.8 && !far.isEmpty
             let pool = useFar ? far : near
             let ti = Int(rnd() * Float(palette.count)) % palette.count
             let node = cloneSkinned(pool[(i * 7 + Int(rnd() * 5)) % pool.count], tint: ti < 3 ? nil : palette[ti])
@@ -622,6 +638,15 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 if b == "Hips" { p.hips = bn; p.hipsBind = bn.simdPosition }
             }
             if special == 5 { node.isHidden = true }   // 伝説のクラバーは INSANE で現れる
+            if p.phoneUser, let hand = node.childNode(withName: "mixamorig:RightHand", recursively: true)
+                ?? node.childNode(withName: "rig_mixamorig_RightHand", recursively: true) {
+                let screen = SCNNode(geometry: SCNPlane(width: 0.07, height: 0.14))
+                screen.geometry?.firstMaterial = phoneMat
+                screen.position = SCNVector3(0, 0.1, 0.02)
+                screen.isHidden = true
+                hand.addChildNode(screen)
+                p.phoneLight = screen
+            }
             people.append(p)
         }
         return people
@@ -629,6 +654,12 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     private func buildArms(into parent: SCNNode) -> ([Person], [[ArmRig]]) {
         var people: [Person] = []
+        let phoneMat = SCNMaterial()
+        phoneMat.lightingModel = .constant
+        phoneMat.diffuse.contents = UIColor.white
+        phoneMat.emission.contents = UIColor(red: 0.9, green: 0.95, blue: 1, alpha: 1)
+        phoneMat.emission.intensity = 2.5
+        phoneMat.isDoubleSided = true
         var arms: [[ArmRig]] = []
         // DJ A は左、DJ B は右。観客側（-z）を向いてブースの手前に立つ
         let setups: [(String, Float)] = [("c09", -0.42), ("c02", 0.42)]
@@ -775,6 +806,37 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         cn.addParticleSystem(ps)
         scene.rootNode.addChildNode(cn)
         confetti = ps
+
+        // スモーク（盛り上がると床から流れる）
+        let sm = SCNParticleSystem()
+        sm.birthRate = 0
+        sm.particleLifeSpan = 7
+        sm.particleLifeSpanVariation = 2
+        sm.particleImage = Self.puffImage()
+        sm.particleSize = 1.1
+        sm.particleSizeVariation = 0.5
+        sm.particleColor = UIColor(white: 0.75, alpha: 0.10)
+        sm.emitterShape = SCNBox(width: 12, height: 0.1, length: 1, chamferRadius: 0)
+        sm.particleVelocity = 0.25
+        sm.particleVelocityVariation = 0.2
+        sm.spreadingAngle = 60
+        sm.acceleration = SCNVector3(0, 0.02, 0.05)
+        sm.blendMode = .alpha
+        sm.isLightingEnabled = true
+        sm.sortingMode = .distance
+        let smn = SCNNode()
+        smn.position = SCNVector3(0, -0.85, -6)
+        smn.addParticleSystem(sm)
+        scene.rootNode.addChildNode(smn)
+        smoke = sm
+    }
+
+    private static func puffImage() -> UIImage {
+        let s: CGFloat = 128
+        return UIGraphicsImageRenderer(size: CGSize(width: s, height: s)).image { ctx in
+            let g = CGGradient(colorsSpace: nil, colors: [UIColor(white: 1, alpha: 0.9).cgColor, UIColor(white: 1, alpha: 0).cgColor] as CFArray, locations: [0, 1])!
+            ctx.cgContext.drawRadialGradient(g, startCenter: CGPoint(x: s / 2, y: s / 2), startRadius: 0, endCenter: CGPoint(x: s / 2, y: s / 2), endRadius: s / 2, options: [])
+        }
     }
 
     // MARK: 状態（メインスレッドから）
@@ -916,10 +978,15 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         updateHands(rigs, t: t, dt: dt, targets: tg, gestures: gs)
         updateGear(t: t, dt: dt, s: s, faderGoal: fg, xGoal: xg)
         updateLights(t: t, energy: energy)
+        // 人が持っているような、ゆっくりした揺れ
+        let sway = simd_quatf(angle: sin(t * 0.37) * 0.006 + sin(t * 1.1) * 0.002, axis: SIMD3<Float>(1, 0, 0))
+            * simd_quatf(angle: sin(t * 0.29 + 1) * 0.008, axis: SIMD3<Float>(0, 1, 0))
+        cameraNode.simdOrientation = camBase * sway
+        smoke?.birthRate = energy > 70 ? CGFloat((energy - 70) / 30 * 6) : 0
     }
 
     private func clipFor(_ p: Person, energy: Double) -> String {
-        if energy >= 99.5 { return p.special == 6 ? "sway" : "jump" }
+        if energy >= 99.5 { return p.special == 6 ? "sway" : (Int(p.phase) % 2 == 0 ? "jump_mc" : "jump") }
         switch p.special {
         case 1: return "crossed"
         case 2: return energy >= 90 ? "clap" : "crossed"
@@ -929,13 +996,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         default: break
         }
         let e = energy + p.bias
-        let pick = Int(p.phase) % 3
+        let pick = Int(p.phase * 7) % 6
         switch e {
-        case ..<20.5: return p.phoneUser ? "phone" : (pick == 0 ? "crossed" : "idle")
-        case ..<40.5: return pick == 0 ? "idle" : "sway"
-        case ..<60.5: return pick == 0 ? "clap" : (pick == 1 ? "sway" : "bounce")
-        case ..<80.5: return pick == 0 ? "clap" : (pick == 1 ? "hands_up" : "bounce")
-        default: return pick == 0 ? "jump" : "hands_up"
+        case ..<20.5: return p.phoneUser ? "phone" : (pick < 2 ? "crossed" : "idle")
+        case ..<40.5: return ["idle", "sway", "sway", "idle", "dance_a", "sway"][pick]
+        case ..<60.5: return ["clap", "sway", "bounce", "dance_a", "dance_twist", "dance_b"][pick]
+        case ..<80.5: return ["dance_twist", "dance_a", "dance_b", "mickey", "clap", "hands_up"][pick]
+        default: return ["jump_mc", "hands_up", "dance_twist", "mickey", "jump", "macarena"][pick]
         }
     }
 
@@ -945,6 +1012,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let legend = energy >= 99.5
         for p in people {
             if p.special == 5 { p.root.isHidden = energy < 81 }
+            p.phoneLight?.isHidden = energy < 95
             let want = clipFor(p, energy: energy)
             if want != p.clip {
                 p.prevClip = p.clip
