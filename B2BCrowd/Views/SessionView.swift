@@ -223,14 +223,17 @@ struct SessionView: View {
                 Button { game.like() } label: {
                     Label("LIKE", systemImage: game.likedThisRound ? "heart.fill" : "heart")
                         .font(.system(size: 13, weight: .heavy))
+                        .lineLimit(1)
+                        .fixedSize()
                 }
                 .buttonStyle(.bordered)
+                .layoutPriority(1)
                 .tint(.pink)
                 .disabled(game.likedThisRound || game.current == nil)
 
                 if game.showsPad {
                     ForEach(Reaction.allCases) { r in
-                        Button { game.react(r) } label: { Text(r.rawValue).font(.system(size: 24)) }
+                        Button { game.react(r) } label: { Text(r.rawValue).font(.system(size: 22)) }
                             .buttonStyle(.plain)
                             .frame(maxWidth: .infinity)
                     }
