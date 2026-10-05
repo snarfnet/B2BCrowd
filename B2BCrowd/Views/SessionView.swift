@@ -23,7 +23,10 @@ struct SessionView: View {
         .overlay { phaseOverlay }
         .overlay { if showHandoff { handoff } }
         .sheet(isPresented: $showSearch) {
-            SearchView(game: game) { game.reserve($0) }
+            SearchView(game: game, initialTab: app.autoOpenSearchTab ?? 0) { game.reserve($0) }
+        }
+        .onAppear {
+            if app.autoOpenSearchTab != nil { showSearch = true }
         }
         .task {
             var last = Date()
@@ -51,7 +54,14 @@ struct SessionView: View {
         HStack(spacing: 10) {
             Button { game.pause() } label: { Image(systemName: "pause.fill").font(.title3) }
             VStack(alignment: .leading, spacing: 0) {
-                LEDText(text: game.config.venue.title, size: 12, color: game.config.venue.palette.2)
+                HStack(spacing: 6) {
+                    LEDText(text: game.config.venue.title, size: 12, color: game.config.venue.palette.2)
+                    Text(app.music.sourceLabel)
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Capsule().fill(Color.white.opacity(0.12)))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
                 LEDText(text: game.config.mode.title, size: 15, color: .cyan)
             }
             Spacer()
@@ -143,7 +153,16 @@ struct SessionView: View {
                     .foregroundStyle(game.currentOwner == 0 ? .pink : .cyan)
                 Text(game.current?.title ?? L.t("まだ何も流れていない", "Nothing playing yet"))
                     .font(.system(size: 17, weight: .bold)).lineLimit(1)
-                Text(game.current?.artist ?? " ").font(.system(size: 13)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(game.current?.artist ?? " ").font(.system(size: 13)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                    if let url = game.current?.externalURL {
+                        // 帰属表示：出典と元の曲ページ
+                        Link(destination: url) {
+                            Text("Audius ↗").font(.system(size: 10, weight: .heavy, design: .monospaced))
+                        }
+                        .foregroundStyle(.purple)
+                    }
+                }
                 if game.current != nil {
                     ProgressView(value: min(game.trackElapsed, game.trackLength), total: max(1, game.trackLength))
                         .tint(game.phase == .countdown ? .red : .pink)
@@ -344,7 +363,7 @@ struct NextTrackReveal: View {
                 LEDText(text: "NEXT TRACK!", size: 40, color: tint)
                     .scaleEffect(shown ? 1 : 2.2)
                     .opacity(shown ? 1 : 0)
-                ArtworkView(track: track)
+                ArtworkView(track: track, size: .large)
                     .frame(width: 230, height: 230)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .shadow(color: tint.opacity(0.8), radius: 30)
@@ -353,6 +372,9 @@ struct NextTrackReveal: View {
                 VStack(spacing: 4) {
                     Text(track?.title ?? "").font(.system(size: 22, weight: .heavy)).multilineTextAlignment(.center)
                     Text(track?.artist ?? "").font(.system(size: 16)).foregroundStyle(.white.opacity(0.75))
+                    if track?.sourceKind == .audius {
+                        Text("Source: Audius").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(.purple)
+                    }
                     LEDText(text: "by \(dj)", size: 16, color: tint).padding(.top, 6)
                 }
                 .opacity(shown ? 1 : 0)

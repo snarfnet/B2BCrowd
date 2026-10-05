@@ -54,6 +54,7 @@ final class GameEngine {
     private var selectedAt: TimeInterval?
     private var timedOut = false
     private var playedIDs = Set<String>()
+    private var failedIDs = Set<String>()
     private var aiVerdictDone = false
     private var nextAmbient: TimeInterval = 6
     private var reactionBudget: Double = 0
@@ -102,6 +103,8 @@ final class GameEngine {
     func reserve(_ t: Track) {
         next = t
         selectedAt = selectionElapsed
+        MusicAnalytics.shared.recordSelection(seconds: selectionElapsed, source: t.sourceKind)
+        if t.sourceKind == .audius { MusicAnalytics.shared.count(.audiusPick) }
         SoundFX.shared.haptic(.light)
         switch phase {
         case .searchingTrack, .waitingForNextDJ:
@@ -190,11 +193,14 @@ final class GameEngine {
 
     /// 動作確認・スクショ用。デモ曲を自動で選び、観客も自動で反応する。
     var autopilot = false
+    /// autopilot が選ぶ曲（空ならデモ曲）
+    var autopilotPool: [Track] = []
 
     private func autopilotStep() {
         if next == nil, phase != .transition, phase != .paused, phase != .result,
            phase == .searchingTrack || phase == .waitingForNextDJ || selectionElapsed > 4 {
-            if let t = DemoCatalog.tracks.filter({ !playedIDs.contains($0.id) }).randomElement() { reserve(t) }
+            let pool = autopilotPool.isEmpty ? DemoCatalog.tracks : autopilotPool
+            if let t = pool.filter({ !playedIDs.contains($0.id) && !failedIDs.contains($0.id) }).randomElement() { reserve(t) }
         }
         guard phase == .playing || phase == .countdown else { return }
         if Int.random(in: 0..<5) == 0 { react([Reaction.fire, .heart, .clap].randomElement()!) }
@@ -314,18 +320,23 @@ final class GameEngine {
         nextAmbient = 5
         decayLeft = 6 + energy * 0.1
 
+        MusicAnalytics.shared.count(.playAttempt)
         do {
             try await player.play(t)
         } catch {
-            // 再生できない曲（地域制限・カタログ削除など）は罰なしで選び直し
+            // 再生できない曲（地域制限・アクセス制限・通信エラーなど）は罰なしで選び直し。セッションは続ける
+            MusicAnalytics.shared.count(.playError)
+            failedIDs.insert(t.id)
             current = nil
             selector = owner
             selectionElapsed = 0
             timedOut = true
             phase = .waitingForNextDJ
-            flash(.notice(L.t("この曲は再生できません。選び直してください", "This track can't play. Pick another.")))
+            let reason = (error as? AudiusError)?.errorDescription
+            flash(.notice(reason ?? L.t("この曲は再生できません。選び直してください", "This track can't play. Pick another.")), seconds: 3.5)
             return
         }
+        MusicAnalytics.shared.count(.playSuccess)
 
         rounds.append(RoundRecord(number: rounds.count + 1, dj: owner, track: t, energyStart: energy, energyEnd: energy))
         scoreSelection(t, owner: owner)

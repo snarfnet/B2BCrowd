@@ -12,7 +12,21 @@ enum L {
 
 enum TrackSource {
     case appleMusic(Song)
+    case audius(AudiusTrack)
     case demo(hue: Double)
+}
+
+// 選曲に使う音楽サービス。ゲーム側は Track と TrackPlayer だけを見るので、ここを増やせば別サービスも足せる。
+enum MusicSourceKind: String, CaseIterable, Identifiable, Codable {
+    case appleMusic, audius
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .appleMusic: return "APPLE MUSIC"
+        case .audius: return "AUDIUS"
+        }
+    }
 }
 
 struct Track: Identifiable, Equatable {
@@ -31,6 +45,25 @@ struct Track: Identifiable, Equatable {
     var isDemo: Bool {
         if case .demo = source { return true }
         return false
+    }
+
+    var sourceKind: MusicSourceKind? {
+        switch source {
+        case .appleMusic: return .appleMusic
+        case .audius: return .audius
+        case .demo: return nil
+        }
+    }
+
+    /// 元サービスの曲ページ（Audius は帰属表示として必ず出す）
+    var externalURL: URL? {
+        if case .audius(let a) = source { return a.webURL }
+        return nil
+    }
+
+    var audius: AudiusTrack? {
+        if case .audius(let a) = source { return a }
+        return nil
     }
 
     var demoHue: Double {
@@ -52,6 +85,22 @@ extension Track {
             duration: song.duration,
             artworkURL: song.artwork?.url(width: 600, height: 600),
             source: .appleMusic(song)
+        )
+    }
+}
+
+extension Track {
+    init(audius a: AudiusTrack) {
+        self.init(
+            id: "audius:" + a.id,
+            title: a.title,
+            artist: a.user.name,
+            album: "",
+            genres: a.genre.map { [$0] } ?? [],
+            releaseYear: a.releaseYear,
+            duration: a.duration.map(TimeInterval.init),
+            artworkURL: (a.artwork?.medium).flatMap(URL.init(string:)),
+            source: .audius(a)
         )
     }
 }

@@ -8,3 +8,6 @@ tools/__pycache__/
 ArtSource/dl/
 ArtSource/out/
 shots*/
+
+# 秘密情報
+Config/Secrets.xcconfig

@@ -65,6 +65,9 @@ jobs:
         rec 21_booth; run session -boothcam; sleep 12; shot 09_booth_a
         sleep 15; shot 10_booth_b; stop
         run result; sleep 125; shot 08_result
+        run audiussearch; sleep 15; shot 13_audius_trending
+        rec 22_audius; run audius; sleep 20; shot 12_audius_play
+        sleep 30; shot 14_audius_later; stop
         xcrun simctl spawn "$UDID" log show --last 15m --predicate 'process == "B2BCrowd"' --style compact > shots/app.log 2>&1 || true
         mkdir -p shots/crash
         cp ~/Library/Logs/DiagnosticReports/B2BCrowd* shots/crash/ 2>/dev/null || true

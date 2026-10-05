@@ -19,6 +19,9 @@ targets:
     type: application
     platform: iOS
     sources: [B2BCrowd]
+    configFiles:
+      Debug: Config/Base.xcconfig
+      Release: Config/Base.xcconfig
     settings:
       base:
         INFOPLIST_FILE: B2BCrowd/Info.plist
@@ -33,6 +36,7 @@ targets:
         CFBundleLocalizations: [ja, en]
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
+        AudiusAPIKey: "$(AUDIUS_API_KEY)"
         NSAppleMusicUsageDescription: "Apple Music の曲を検索して再生し、B2B 選曲ゲームで使うためにアクセスします。"
         UILaunchScreen:
           UIColorName: ""

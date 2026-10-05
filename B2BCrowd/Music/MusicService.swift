@@ -86,10 +86,48 @@ final class MusicService {
     var lastError: String?
 
     let musicKitPlayer = MusicKitPlayer()
+    let audiusPlayer = AudiusPlayer()
     let demoPlayer = DemoPlayer()
 
-    var player: TrackPlayer { demoMode ? demoPlayer : musicKitPlayer }
-    var isReady: Bool { demoMode || (access == .authorized && canPlayCatalog) }
+    /// 選曲に使うサービス。切り替えるときは鳴っている方を必ず止めてから（2つを同時に鳴らさない）
+    var source: MusicSourceKind = MusicService.loadSource() {
+        didSet {
+            guard source != oldValue else { return }
+            stopAll()
+            UserDefaults.standard.set(source.rawValue, forKey: Self.sourceKey)
+        }
+    }
+
+    var player: TrackPlayer {
+        if demoMode { return demoPlayer }
+        switch source {
+        case .appleMusic: return musicKitPlayer
+        case .audius: return audiusPlayer
+        }
+    }
+
+    /// Audius は登録不要・無料で聴けるので、ネットにつながれば常に使える
+    var isReady: Bool {
+        if demoMode { return true }
+        switch source {
+        case .appleMusic: return access == .authorized && canPlayCatalog
+        case .audius: return true
+        }
+    }
+
+    /// いま画面に出すサービス名
+    var sourceLabel: String { demoMode ? "DEMO" : source.title }
+
+    func stopAll() {
+        musicKitPlayer.stop()
+        audiusPlayer.stop()
+        demoPlayer.stop()
+    }
+
+    private static let sourceKey = "musicSource.v1"
+    private static func loadSource() -> MusicSourceKind {
+        UserDefaults.standard.string(forKey: sourceKey).flatMap(MusicSourceKind.init(rawValue:)) ?? .appleMusic
+    }
 
     func refresh() async {
         access = Self.map(MusicAuthorization.currentStatus)
@@ -127,6 +165,7 @@ final class MusicService {
         if demoMode { return DemoCatalog.search(term) }
         let q = term.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return [] }
+        if source == .audius { return try await searchAudius(q) }
         var req = MusicCatalogSearchRequest(term: q, types: [Song.self])
         req.limit = 25
         let res = try await req.response()
@@ -139,5 +178,22 @@ final class MusicService {
         req.limit = 50
         let res = try await req.response()
         return res.items.map(Track.init(song:))
+    }
+
+    // MARK: Audius
+
+    func searchAudius(_ q: String, offset: Int = 0) async throws -> [Track] {
+        MusicAnalytics.shared.count(.audiusSearch)
+        return try await AudiusAPIClient.shared.search(q, offset: offset).map(Track.init(audius:))
+    }
+
+    func trendingAudius(_ c: AudiusTrendingCategory, offset: Int = 0) async throws -> [Track] {
+        try await AudiusAPIClient.shared.trending(genre: c.genre, offset: offset).map(Track.init(audius:))
+    }
+
+    /// 再生できるか（API の権利・アクセス情報とアプリの方針で判定）
+    func audiusPlayability(_ t: Track) async -> AudiusPlayability {
+        guard let a = t.audius else { return .ok }
+        return audiusPlayer.policy.check(a, apiKey: await AudiusAPIClient.shared.apiKey)
     }
 }

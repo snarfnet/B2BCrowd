@@ -43,7 +43,7 @@ struct TitleView: View {
     }
 }
 
-// Apple Music の接続状態。使えなくてもアプリ自体はデモモードで遊べる。
+// 音楽ソースの選択と接続状態。使えなくてもアプリ自体はデモモードで遊べる。
 struct MusicStatusCard: View {
     @Environment(MusicService.self) private var music
     @State private var showOffer = false
@@ -51,6 +51,12 @@ struct MusicStatusCard: View {
     var body: some View {
         @Bindable var music = music
         VStack(alignment: .leading, spacing: 10) {
+            Text("MUSIC SOURCE").font(.system(size: 11, weight: .heavy, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
+            Picker("", selection: $music.source) {
+                ForEach(MusicSourceKind.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .disabled(music.demoMode)
             HStack {
                 Image(systemName: icon).foregroundStyle(color)
                 Text(statusText).font(.system(size: 14, weight: .bold))
@@ -60,6 +66,12 @@ struct MusicStatusCard: View {
                 Text(help).font(.caption).foregroundStyle(.white.opacity(0.7))
             }
             HStack(spacing: 10) {
+                if music.source == .audius {
+                    Link(destination: URL(string: "https://audius.co")!) {
+                        Label("audius.co", systemImage: "arrow.up.right.square")
+                    }
+                    .font(.caption)
+                } else {
                 switch music.access {
                 case .unknown, .notDetermined:
                     Button(L.t("Apple Music に接続", "Connect Apple Music")) {
@@ -76,6 +88,7 @@ struct MusicStatusCard: View {
                         Button(L.t("Apple Music に登録", "Get Apple Music")) { showOffer = true }
                             .buttonStyle(.bordered)
                     }
+                }
                 }
                 Spacer()
                 Toggle(isOn: $music.demoMode) {
@@ -94,7 +107,7 @@ struct MusicStatusCard: View {
         }
     }
 
-    private var ready: Bool { music.access == .authorized && music.canPlayCatalog }
+    private var ready: Bool { music.isReady }
 
     private var icon: String {
         if music.demoMode { return "gamecontroller.fill" }
@@ -108,6 +121,7 @@ struct MusicStatusCard: View {
 
     private var statusText: String {
         if music.demoMode { return L.t("デモモード（音なし・架空の曲）", "Demo mode (silent, fictional tracks)") }
+        if music.source == .audius { return L.t("Audius（無料・登録不要）", "Audius (free, no sign-in)") }
         switch music.access {
         case .authorized:
             if !music.subscriptionChecked { return L.t("Apple Music を確認中…", "Checking Apple Music…") }
@@ -120,6 +134,10 @@ struct MusicStatusCard: View {
 
     private var helpText: String? {
         if music.demoMode { return L.t("流れとルールを試すモード。曲は再生されません。", "Try the rules and flow. No music plays.") }
+        if music.source == .audius {
+            return L.t("アーティストが Audius に公開している曲を公式 API でストリーミングします。ネット接続が必要です。",
+                       "Streams tracks artists publish on Audius through the official API. Needs a connection.")
+        }
         switch music.access {
         case .authorized where music.subscriptionChecked && !music.canPlayCatalog:
             return L.t("曲の再生には Apple Music のサブスクリプションが必要です。", "Playing songs requires an Apple Music subscription.")

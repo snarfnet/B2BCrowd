@@ -109,7 +109,7 @@ struct LobbyView: View {
             Button {
                 app.start()
             } label: {
-                Label(music.isReady ? "START" : L.t("Apple Music に接続するか DEMO を ON に", "Connect Apple Music or turn on DEMO"),
+                Label(music.isReady ? "START · \(music.sourceLabel)" : L.t("Apple Music に接続するか AUDIUS / DEMO を選ぶ", "Connect Apple Music, or pick AUDIUS / DEMO"),
                       systemImage: "play.fill")
             }
             .buttonStyle(NeonButtonStyle(color: .pink))

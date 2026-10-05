@@ -39,15 +39,20 @@ struct NeonButtonStyle: ButtonStyle {
 }
 
 // ジャケット。デモ曲は色のグラデーションで代用。
+enum ArtworkSize { case small, medium, large }
+
 struct ArtworkView: View {
     let track: Track?
     var hidden = false
+    var size: ArtworkSize = .medium
 
     var body: some View {
         ZStack {
             if hidden {
                 LinearGradient(colors: [.purple, .black], startPoint: .topLeading, endPoint: .bottomTrailing)
                 Text("?").font(.system(size: 60, weight: .black)).foregroundStyle(.white.opacity(0.8))
+            } else if let a = track?.audius, let art = a.artwork, art.medium != nil {
+                MirroredImage(urls: AudiusArtworkURLs.candidates(art, size: size))
             } else if let t = track, let url = t.artworkURL {
                 AsyncImage(url: url) { img in
                     img.resizable().scaledToFill()
@@ -150,4 +155,64 @@ struct EnergyMeter: View {
 func formatTime(_ t: TimeInterval) -> String {
     let s = max(0, Int(t.rounded(.down)))
     return String(format: "%d:%02d", s / 60, s % 60)
+}
+
+// Audius のジャケット。表示サイズに近い画像を選び、読めなければ公式レスポンスの mirrors に順に切り替える。
+enum AudiusArtworkURLs {
+    static func candidates(_ art: AudiusTrack.Artwork, size: ArtworkSize) -> [URL] {
+        let primary: String? = {
+            switch size {
+            case .small: return art.small ?? art.medium
+            case .medium: return art.medium ?? art.large
+            case .large: return art.large ?? art.medium
+            }
+        }()
+        guard let p = primary, let url = URL(string: p) else { return [] }
+        var out = [url]
+        for m in art.mirrors ?? [] {
+            guard let host = URL(string: m)?.host, var c = URLComponents(url: url, resolvingAgainstBaseURL: false) else { continue }
+            c.host = host
+            if let u = c.url { out.append(u) }
+        }
+        return out
+    }
+}
+
+@MainActor
+final class ImageMemoryCache {
+    static let shared = ImageMemoryCache()
+    private let cache = NSCache<NSURL, UIImage>()
+    init() { cache.countLimit = 150 }
+    func get(_ u: URL) -> UIImage? { cache.object(forKey: u as NSURL) }
+    func set(_ u: URL, _ i: UIImage) { cache.setObject(i, forKey: u as NSURL) }
+}
+
+struct MirroredImage: View {
+    let urls: [URL]
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                Color.gray.opacity(0.3)
+            }
+        }
+        .task(id: urls.first) { await load() }
+    }
+
+    private func load() async {
+        guard let first = urls.first else { return }
+        if let hit = ImageMemoryCache.shared.get(first) { image = hit; return }
+        for u in urls {
+            if Task.isCancelled { return }
+            guard let (data, resp) = try? await URLSession.shared.data(from: u),
+                  (resp as? HTTPURLResponse)?.statusCode ?? 0 < 400,
+                  let img = UIImage(data: data) else { continue }
+            ImageMemoryCache.shared.set(first, img)
+            image = img
+            return
+        }
+    }
 }

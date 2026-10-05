@@ -40,6 +40,8 @@ final class AppModel {
     let music = MusicService()
     let profiles = ProfileStore()
     var unlocked: [String: [Achievement]] = [:]
+    /// スクショ用：セッション開始時に検索画面を開く（タブ番号）
+    var autoOpenSearchTab: Int?
 
     func start() {
         Self.saveConfig(config)
@@ -58,6 +60,34 @@ final class AppModel {
         guard let i = args.firstIndex(of: "-shot"), i + 1 < args.count else { return }
         music.demoMode = true
         switch args[i + 1] {
+        case "audius", "audiussearch":
+            // Audius の実ストリーミングで B2B を通す（TEST 1）／ TRENDING 検索画面
+            music.demoMode = false
+            music.source = .audius
+            var c = SessionConfig()
+            c.djNames = ["DJ KAORI", "DJ NEON"]
+            c.mode = .timeAttack
+            c.length = 4
+            c.playLimit = 25
+            c.crowd = .mix
+            c.venue = .tokyoNight
+            c.characters = ["c09", "c02"]
+            config = c
+            let engine = GameEngine(config: c, player: music.player)
+            if args[i + 1] == "audiussearch" {
+                autoOpenSearchTab = 1
+                screen = .session(engine)
+                return
+            }
+            engine.autopilot = true
+            Task { @MainActor in
+                let list = (try? await music.trendingAudius(AudiusTrendingCategory.all[1])) ?? []
+                var pool: [Track] = []
+                for t in list where await music.audiusPlayability(t).isPlayable { pool.append(t) }
+                print("AUDIUS_SHOT pool=\(pool.count) of \(list.count)")
+                engine.autopilotPool = pool.isEmpty ? DemoCatalog.tracks : pool
+                screen = .session(engine)
+            }
         case "lobby":
             screen = .lobby
         case "session", "result":
