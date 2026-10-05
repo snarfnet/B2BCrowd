@@ -49,6 +49,7 @@ struct Booth3DView: UIViewRepresentable {
 
 // MARK: - 手
 
+@MainActor
 private final class HandRig {
     let root = SCNNode()        // 手首の位置
     let gesture = SCNNode()     // 動きのアニメーション用
