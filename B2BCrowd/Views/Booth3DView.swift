@@ -70,12 +70,12 @@ private final class HandRig {
         let sleeveM = BoothScene.mat(sleeve, rough: 0.8)
 
         // 前腕（袖）。カメラ側（+z）へ斜め上に伸びて画面外へ
-        let arm = SCNNode(geometry: SCNCylinder(radius: 0.036, height: 0.55))
+        let arm = SCNNode(geometry: SCNCylinder(radius: 0.03, height: 0.5))
         arm.geometry?.materials = [sleeveM]
         arm.eulerAngles.x = .pi / 2 - 0.38
-        arm.position = SCNVector3(0, 0.1, 0.26)
+        arm.position = SCNVector3(0, 0.09, 0.235)
         body.addChildNode(arm)
-        let cuff = SCNNode(geometry: SCNCylinder(radius: 0.039, height: 0.03))
+        let cuff = SCNNode(geometry: SCNCylinder(radius: 0.033, height: 0.03))
         cuff.geometry?.materials = [BoothScene.mat(.white.withAlphaComponent(0.9), rough: 0.6)]
         cuff.eulerAngles.x = .pi / 2 - 0.38
         cuff.position = SCNVector3(0, 0.0, 0.0)
@@ -177,10 +177,10 @@ final class BoothScene {
 
     static func mat(_ c: UIColor, metal: CGFloat = 0, rough: CGFloat = 0.5, emission: UIColor? = nil) -> SCNMaterial {
         let m = SCNMaterial()
-        m.lightingModel = .physicallyBased
+        m.lightingModel = .blinn
         m.diffuse.contents = c
-        m.metalness.contents = metal
-        m.roughness.contents = rough
+        m.specular.contents = UIColor(white: 0.15 + metal * 0.6 * (1 - rough), alpha: 1)
+        m.shininess = 0.2 + (1 - rough) * 0.6
         if let emission { m.emission.contents = emission }
         return m
     }
@@ -211,21 +211,21 @@ final class BoothScene {
         scene.background.contents = UIColor.clear
 
         let cam = SCNCamera()
-        cam.fieldOfView = 52
+        cam.fieldOfView = 40
         cam.zNear = 0.01
         cam.zFar = 10
         cam.wantsHDR = false
         cameraNode.camera = cam
-        cameraNode.position = SCNVector3(0, 0.6, 0.72)
-        cameraNode.look(at: SCNVector3(0, 0.0, -0.12))
+        cameraNode.position = SCNVector3(0, 0.82, 0.98)
+        cameraNode.look(at: SCNVector3(0, 0.0, -0.06))
         scene.rootNode.addChildNode(cameraNode)
 
-        let amb = SCNNode(); amb.light = SCNLight(); amb.light?.type = .ambient; amb.light?.intensity = 280
+        let amb = SCNNode(); amb.light = SCNLight(); amb.light?.type = .ambient; amb.light?.intensity = 420
         scene.rootNode.addChildNode(amb)
-        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 900
+        let key = SCNNode(); key.light = SCNLight(); key.light?.type = .directional; key.light?.intensity = 1000
         key.eulerAngles = SCNVector3(-1.0, 0.25, 0)
         scene.rootNode.addChildNode(key)
-        rimLight.light = SCNLight(); rimLight.light?.type = .omni; rimLight.light?.intensity = 900
+        rimLight.light = SCNLight(); rimLight.light?.type = .omni; rimLight.light?.intensity = 220
         rimLight.position = SCNVector3(0, 0.5, -0.9)
         scene.rootNode.addChildNode(rimLight)
 
@@ -252,8 +252,8 @@ final class BoothScene {
         let sleeves = [UIColor(red: 0.95, green: 0.2, blue: 0.55, alpha: 1), UIColor(red: 0.1, green: 0.75, blue: 0.95, alpha: 1)]
         for d in 0..<2 {
             let outerLeft = d == 0
-            let outer = HandRig(skin: skins[d], sleeve: sleeves[d], isLeft: outerLeft, yaw: outerLeft ? -0.22 : 0.22)
-            let inner = HandRig(skin: skins[d], sleeve: sleeves[d], isLeft: !outerLeft, yaw: outerLeft ? 0.12 : -0.12)
+            let outer = HandRig(skin: skins[d], sleeve: sleeves[d], isLeft: outerLeft, yaw: outerLeft ? -0.3 : 0.3)
+            let inner = HandRig(skin: skins[d], sleeve: sleeves[d], isLeft: !outerLeft, yaw: outerLeft ? -0.75 : 0.75)
             for h in [outer, inner] { scene.rootNode.addChildNode(h.root) }
             hands.append([outer, inner])
             outer.root.position = outer.wrist(for: restTip(d, outer: true))
