@@ -4,6 +4,7 @@ struct LobbyView: View {
     @Environment(AppModel.self) private var app
     @Environment(MusicService.self) private var music
     @Environment(ProfileStore.self) private var profiles
+    @State private var crowdSound = SoundFX.shared.enabled
 
     var body: some View {
         @Bindable var app = app
@@ -60,6 +61,12 @@ struct LobbyView: View {
                         }
                         .pickerStyle(.segmented)
                         Text(crowdHelp).font(.caption).foregroundStyle(.white.opacity(0.6))
+                    }
+
+                    section(L.t("観客の声", "CROWD SOUND")) {
+                        Toggle(L.t("歓声・指笛・拍手を鳴らす", "Cheers, whistles and applause"), isOn: $crowdSound)
+                            .tint(.pink)
+                            .onChange(of: crowdSound) { _, v in SoundFX.shared.enabled = v }
                     }
 
                     section("VENUE") {

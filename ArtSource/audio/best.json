@@ -1,0 +1,11 @@
+{
+ "amb_high": "raw\\b2b_amb_high_s11_00001.flac",
+ "amb_low": "raw\\b2b_amb_low_s11_00001.flac",
+ "applause": "raw\\b2b_applause_s22_00001.flac",
+ "boo": "raw\\b2b_boo_s22_00001.flac",
+ "cheer_big": "raw\\b2b_cheer_big_s33_00001.flac",
+ "cheer_small": "raw\\b2b_cheer_small_s11_00001.flac",
+ "horn": "raw\\b2b_horn_s11_00001.flac",
+ "whistle": "raw\\b2b_whistle_s11_00001.flac",
+ "woo": "raw\\b2b_woo_s33_00001.flac"
+}

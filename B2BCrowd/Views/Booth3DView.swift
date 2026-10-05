@@ -291,8 +291,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         cam.exposureOffset = -0.1
         cam.saturation = 1.08
         cameraNode.camera = cam
-        cameraNode.position = SCNVector3(0, 1.05, 1.55)
-        cameraNode.look(at: SCNVector3(0, -0.25, -2.2))
+        cameraNode.position = SCNVector3(0, 1.3, 1.45)
+        cameraNode.look(at: SCNVector3(0, -0.3, -1.9))
         if ProcessInfo.processInfo.arguments.contains("-boothcam") {   // 手元の確認用
             cameraNode.position = SCNVector3(0.1, 0.95, 1.1)
             cameraNode.look(at: SCNVector3(0, 0, -0.1))
@@ -413,7 +413,16 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             guard let g = node.geometry else { return }
             for m in g.materials {
                 let n = (m.name ?? "").lowercased()
-                if n.contains("gunmetal") { self.pbr(m, rough: 0.38, metal: 0.85) }
+                if n.contains("print") { self.pbr(m, rough: n.contains("booth") ? 0.35 : 0.6, metal: 0.15) }
+                else if n.contains("lamp_bulb") {
+                    m.lightingModel = .constant
+                    m.emission.contents = UIColor(red: 1, green: 0.9, blue: 0.75, alpha: 1)
+                    m.emission.intensity = 3
+                }
+                else if n.contains("cup") { self.pbr(m, rough: 0.25) }
+                else if n.contains("drink") { self.pbr(m, rough: 0.05) }
+                else if n.contains("cable") || n.contains("hp_pad") { self.pbr(m, rough: 0.6) }
+                else if n.contains("gunmetal") { self.pbr(m, rough: 0.38, metal: 0.85) }
                 else if n.contains("alu") { self.pbr(m, rough: 0.25, metal: 1) }
                 else if n.contains("chrome") { self.pbr(m, rough: 0.1, metal: 1) }
                 else if n.contains("rubber") || n.contains("pad") { self.pbr(m, rough: 0.85) }
@@ -453,6 +462,20 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             for i in 0..<12 { if let m = find("meter_\(c)_\(i)") { meters[c].append(uniq(m)) } }
         }
         if let x = find("xfader") { xfader = x; xBase = x.simdPosition }
+        // グースネックのランプで手元を照らす
+        if let head = find("lamp_head") {
+            let l = SCNNode()
+            l.light = SCNLight()
+            l.light?.type = .spot
+            l.light?.intensity = 260
+            l.light?.color = UIColor(red: 1, green: 0.88, blue: 0.7, alpha: 1)
+            l.light?.spotInnerAngle = 25
+            l.light?.spotOuterAngle = 75
+            l.light?.attenuationEndDistance = 1.2
+            l.simdPosition = head.simdWorldPosition
+            scene.rootNode.addChildNode(l)
+            l.look(at: SCNVector3(0, 0.06, -0.02))
+        }
         if let led = find("booth_led") {
             boothLED = uniq(led)
             boothLED?.geometry?.firstMaterial?.emission.contents = UIColor(venue.palette.2)
@@ -462,8 +485,24 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         for i in 0..<screens.count { applyScreen(i, title: nil, mode: "STANDBY", color: .gray) }
     }
 
+    /// 一度読み込んだ人物は使い回す（タイトルとセッションで2回読まない）
+    private static var templateCache: [String: SCNNode] = [:]
+    private static let cacheLock = NSLock()
+
     private func loadCharacter(_ name: String, lod: Bool = false) -> SCNNode? {
         let file = lod ? "\(name)_lod" : name
+        Self.cacheLock.lock()
+        let cached = Self.templateCache[file]
+        Self.cacheLock.unlock()
+        if let cached { return cached }
+        guard let node = loadCharacterUncached(name, file: file) else { return nil }
+        Self.cacheLock.lock()
+        Self.templateCache[file] = node
+        Self.cacheLock.unlock()
+        return node
+    }
+
+    private func loadCharacterUncached(_ name: String, file: String) -> SCNNode? {
         guard let s = SCNScene(named: "Crowd.scnassets/\(name)/\(file).dae") else { return nil }
         let n = SCNNode()
         for c in s.rootNode.childNodes { n.addChildNode(c) }
@@ -612,7 +651,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let key = SCNNode()
         key.light = SCNLight()
         key.light?.type = .spot
-        key.light?.intensity = 450
+        key.light?.intensity = 300
         key.light?.color = UIColor(red: 1, green: 0.92, blue: 0.82, alpha: 1)
         key.light?.spotInnerAngle = 30
         key.light?.spotOuterAngle = 70
@@ -621,7 +660,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         key.light?.shadowRadius = 4
         key.light?.shadowSampleCount = 8
         key.light?.shadowColor = UIColor(white: 0, alpha: 0.7)
-        key.position = SCNVector3(0.2, 1.7, 0.7)
+        key.position = SCNVector3(0.2, 1.6, -0.2)
         key.look(at: SCNVector3(0, 0, 0))
         scene.rootNode.addChildNode(key)
 

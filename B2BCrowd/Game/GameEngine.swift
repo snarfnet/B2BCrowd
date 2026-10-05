@@ -151,6 +151,13 @@ final class GameEngine {
         guard current != nil, phase == .playing || phase == .countdown else { return }
         reactions.append(FloatEvent(text: r.rawValue, value: 0))
         trimFeeds()
+        switch r {
+        case .fire: SoundFX.shared.play(.woo)
+        case .heart: SoundFX.shared.play(.whistle)
+        case .clap: SoundFX.shared.play(.applause)
+        case .boo: SoundFX.shared.play(.boo)
+        case .meh: break
+        }
         // 連打で無限に上がらないよう、1曲あたりの上げ幅に上限
         var v = r.energy
         if v > 0 {
@@ -197,6 +204,7 @@ final class GameEngine {
 
     func tick(_ dt: TimeInterval) {
         if autopilot { autopilotStep() }
+        SoundFX.shared.updateCrowd(energy: energy, active: phase != .paused && phase != .result)
         switch phase {
         case .playing, .countdown:
             if player.isInterrupted {
@@ -273,6 +281,8 @@ final class GameEngine {
                 add(5, dj: r.dj, kind: .flow, label: "COMBO x\(combo)")
                 flash(.combo(combo))
                 SoundFX.shared.play(combo >= 10 ? .bigCheer : .cheer)
+                SoundFX.shared.play(.applause)
+                if combo >= 10 || combo % 5 == 0 { SoundFX.shared.play(.horn) }
                 SoundFX.shared.haptic(combo >= 10 ? .heavy : .medium)
             }
         } else {
@@ -381,8 +391,10 @@ final class GameEngine {
             SoundFX.shared.play(.cheer)
         } else if s < 0.32 {
             add(-6 * weight, dj: r.dj, kind: .crowd, label: L.t("観客が冷めた", "CROWD COOLING"))
+            SoundFX.shared.play(.boo)
         } else {
             add(3 * weight, dj: r.dj, kind: .crowd, label: L.t("観客ノリノリ", "CROWD GROOVING"))
+            SoundFX.shared.play(.woo)
         }
     }
 
@@ -404,6 +416,7 @@ final class GameEngine {
         if energy >= 99.5, legendaryArmed {
             legendaryArmed = false
             flash(.legendary, seconds: 4)
+            SoundFX.shared.play(.horn)
             SoundFX.shared.play(.bigCheer)
             SoundFX.shared.success()
             if config.mode == .challenge {
@@ -444,6 +457,7 @@ final class GameEngine {
             rounds[rounds.count - 1].energyEnd = energy
         }
         player.stop()
+        SoundFX.shared.stopCrowd()
         finishReason = reason
         phase = .result
     }
