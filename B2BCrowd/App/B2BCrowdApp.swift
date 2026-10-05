@@ -6,6 +6,7 @@ struct B2BCrowdApp: App {
 
     init() {
         SoundFX.configureSession()
+        ClubScene.preload()
     }
 
     var body: some Scene {

@@ -251,7 +251,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var people: [Person] = []
     private var arms: [[ArmRig]] = []        // [DJ][外側, 内側]
     private var gestures: [[Gesture]] = [[.idle, .idle], [.idle, .idle]]
-    private var targets: [[SIMD3<Float>]] = [[.zero, .zero], [.zero, .zero]]
+    private var targets: [[SIMD3<Float>]] = [[SIMD3(-0.59, 0, 0.3), SIMD3(-0.33, 0, 0.3)], [SIMD3(0.59, 0, 0.3), SIMD3(0.33, 0, 0.3)]]
     private var faderGoal: [Float] = [1, 0]
     private var xGoal: Float = -1
 
@@ -309,12 +309,37 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
         buildVenue()
         buildGear()
-        buildCrowd()
-        buildArms()
         buildLights()
+        // 人物は重いので裏で読み込み、できたらまとめて足す（画面が固まらないように）
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            let root = SCNNode()
+            let crowd = buildCrowd(into: root)
+            let (djs, rigs) = buildArms(into: root)
+            lock.lock()
+            people = crowd + djs
+            arms = rigs
+            lock.unlock()
+            DispatchQueue.main.async { [self] in
+                scene.rootNode.addChildNode(root)
+                if let s = lastApplied { planHands(s) }
+            }
+        }
     }
 
-    private func pbr(_ m: SCNMaterial, rough: CGFloat, metal: CGFloat = 0) {
+    /// アプリ起動時に人物を先に読んでおく
+    static func preload() {
+        DispatchQueue.global(qos: .utility).async {
+            for i in 1...18 {
+                let n = String(format: "c%02d", i)
+                _ = template(n, lod: false)
+                _ = template(n, lod: true)
+            }
+        }
+    }
+
+    private func pbr(_ m: SCNMaterial, rough: CGFloat, metal: CGFloat = 0) { Self.pbrS(m, rough: rough, metal: metal) }
+
+    private static func pbrS(_ m: SCNMaterial, rough: CGFloat, metal: CGFloat = 0) {
         m.lightingModel = .physicallyBased
         m.roughness.contents = rough
         m.metalness.contents = metal
@@ -489,20 +514,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private static var templateCache: [String: SCNNode] = [:]
     private static let cacheLock = NSLock()
 
-    private func loadCharacter(_ name: String, lod: Bool = false) -> SCNNode? {
-        let file = lod ? "\(name)_lod" : name
-        Self.cacheLock.lock()
-        let cached = Self.templateCache[file]
-        Self.cacheLock.unlock()
-        if let cached { return cached }
-        guard let node = loadCharacterUncached(name, file: file) else { return nil }
-        Self.cacheLock.lock()
-        Self.templateCache[file] = node
-        Self.cacheLock.unlock()
-        return node
-    }
+    private func loadCharacter(_ name: String, lod: Bool = false) -> SCNNode? { Self.template(name, lod: lod) }
 
-    private func loadCharacterUncached(_ name: String, file: String) -> SCNNode? {
+    private static func template(_ name: String, lod: Bool) -> SCNNode? {
+        let file = lod ? "\(name)_lod" : name
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        if let cached = templateCache[file] { return cached }
         guard let s = SCNScene(named: "Crowd.scnassets/\(name)/\(file).dae") else { return nil }
         let n = SCNNode()
         for c in s.rootNode.childNodes { n.addChildNode(c) }
@@ -511,7 +529,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             let lname = (node.name ?? "").lowercased()
             let alpha = ["bob", "afro", "ponytail", "long", "short", "braid", "eyebrow", "eyelash", "fedora"].contains { lname.contains($0) }
             for m in g.materials {
-                self.pbr(m, rough: lname.contains("generic") ? 0.55 : 0.75)
+                pbrS(m, rough: lname.contains("generic") ? 0.55 : 0.75)
                 if alpha {
                     m.transparencyMode = .aOne
                     m.blendMode = .alpha
@@ -520,6 +538,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 }
             }
         }
+        templateCache[file] = n
         return n
     }
 
@@ -551,11 +570,12 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         return c
     }
 
-    private func buildCrowd() {
+    private func buildCrowd(into parent: SCNNode) -> [Person] {
+        var people: [Person] = []
         let names = (1...18).map { String(format: "c%02d", $0) }
         let near = names.compactMap { loadCharacter($0) }
         let far = names.compactMap { loadCharacter($0, lod: true) }
-        guard !near.isEmpty else { return }
+        guard !near.isEmpty else { return [] }
         let count = min(96, venue.crowdSize * 2 + 20)
         var seed: UInt64 = 0x9E3779B97F4A7C15 &+ UInt64(abs(venue.rawValue.hashValue) % 1000)
         func rnd() -> Float {
@@ -589,7 +609,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             node.eulerAngles.y = atan2(-pos.x, 1.0 - pos.y) + (rnd() - 0.5) * 0.5
             let sc = 0.95 + rnd() * 0.1
             node.scale = SCNVector3(sc, sc, sc)
-            scene.rootNode.addChildNode(node)
+            parent.addChildNode(node)
 
             let special: Int = i < 6 ? [1, 2, 3, 4, 5, 0][i] : 0
             let p = Person(root: node, phase: rnd() * 100, speed: 0.92 + rnd() * 0.16, bias: Double(rnd() * 24 - 12),
@@ -604,9 +624,12 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             if special == 5 { node.isHidden = true }   // 伝説のクラバーは INSANE で現れる
             people.append(p)
         }
+        return people
     }
 
-    private func buildArms() {
+    private func buildArms(into parent: SCNNode) -> ([Person], [[ArmRig]]) {
+        var people: [Person] = []
+        var arms: [[ArmRig]] = []
         // DJ A は左、DJ B は右。観客側（-z）を向いてブースの手前に立つ
         let setups: [(String, Float)] = [("c09", -0.42), ("c02", 0.42)]
         let boneNames = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftShoulder", "RightShoulder",
@@ -616,7 +639,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             let dj = cloneSkinned(t, tint: k == 0 ? UIColor(white: 0.18, alpha: 1) : UIColor(red: 0.2, green: 0.22, blue: 0.3, alpha: 1))
             dj.position = SCNVector3(cx, -1.02, 0.5)
             dj.eulerAngles.y = .pi
-            scene.rootNode.addChildNode(dj)
+            parent.addChildNode(dj)
             // 体は観客と同じ仕組みで小さく揺らす（腕は後で IK が上書き）
             let p = Person(root: dj, phase: Float(k) * 0.37, speed: 1, bias: 0, special: 6, phoneUser: false)
             for b in boneNames {
@@ -636,7 +659,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         for d in 0..<arms.count {
             for k in 0..<arms[d].count { arms[d][k].tip = restTip(d, outer: k == 0) }
         }
-        targets = [[restTip(0, outer: true), restTip(0, outer: false)], [restTip(1, outer: true), restTip(1, outer: false)]]
+        return (people, arms)
     }
 
     private func buildLights() {
@@ -884,12 +907,13 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         lock.lock()
         let s = st
         let tg = targets, gs = gestures, fg = faderGoal, xg = xGoal
+        let crowd = people, rigs = arms
         lock.unlock()
         let t = Float(time.truncatingRemainder(dividingBy: 10000))
         let energy = Double(s.energy)
 
-        updateCrowd(t: t, dt: dt, energy: energy)
-        updateHands(t: t, dt: dt, targets: tg, gestures: gs)
+        updateCrowd(crowd, t: t, dt: dt, energy: energy)
+        updateHands(rigs, t: t, dt: dt, targets: tg, gestures: gs)
         updateGear(t: t, dt: dt, s: s, faderGoal: fg, xGoal: xg)
         updateLights(t: t, energy: energy)
     }
@@ -915,7 +939,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
     }
 
-    private func updateCrowd(t: Float, dt: Float, energy: Double) {
+    private func updateCrowd(_ people: [Person], t: Float, dt: Float, energy: Double) {
         let clips = CrowdClips.all
         guard !clips.isEmpty else { return }
         let legend = energy >= 99.5
@@ -949,7 +973,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
     }
 
-    private func updateHands(t: Float, dt: Float, targets: [[SIMD3<Float>]], gestures: [[Gesture]]) {
+    private func updateHands(_ arms: [[ArmRig]], t: Float, dt: Float, targets: [[SIMD3<Float>]], gestures: [[Gesture]]) {
         for d in 0..<arms.count {
             for k in 0..<arms[d].count {
                 let rig = arms[d][k]
