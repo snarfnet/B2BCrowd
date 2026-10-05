@@ -200,8 +200,31 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
 
 // MARK: - Session config / score
 
+// DJ として選べるキャラ（3D モデル名と表示名）
+struct DJCharacter: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let isRobot: Bool
+
+    static let all: [DJCharacter] = [
+        DJCharacter(id: "c09", name: "SAKI", isRobot: false),
+        DJCharacter(id: "c02", name: "LEO", isRobot: false),
+        DJCharacter(id: "c12", name: "KOFI", isRobot: false),
+        DJCharacter(id: "c16", name: "MEI", isRobot: false),
+        DJCharacter(id: "c05", name: "ZURI", isRobot: false),
+        DJCharacter(id: "c07", name: "MR. FEDORA", isRobot: false),
+        DJCharacter(id: "c13", name: "HARU", isRobot: false),
+        DJCharacter(id: "r01", name: "CHROME-X", isRobot: true),
+        DJCharacter(id: "r02", name: "ANDROID 7", isRobot: true),
+        DJCharacter(id: "r03", name: "RETRO-BOT", isRobot: true),
+    ]
+
+    static func named(_ id: String) -> DJCharacter { all.first { $0.id == id } ?? all[0] }
+}
+
 struct SessionConfig: Codable {
     var djNames: [String] = ["DJ A", "DJ B"]
+    var characters: [String] = ["c09", "c02"]
     var mode: GameMode = .free
     var genreID: String = "TECHNO"
     var theme: String = Themes.all[0]

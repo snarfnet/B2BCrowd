@@ -16,6 +16,7 @@ struct BoothState: Equatable {
     var venue: Venue
     var current: Track?
     var next: Track?
+    var characters: [String] = ["c09", "c02"]
 
     static func == (l: BoothState, r: BoothState) -> Bool {
         l.owner == r.owner && l.currentID == r.currentID && l.nextID == r.nextID && l.nextHidden == r.nextHidden
@@ -26,7 +27,7 @@ struct BoothState: Equatable {
 struct Booth3DView: UIViewRepresentable {
     let state: BoothState
 
-    func makeCoordinator() -> ClubScene { ClubScene(venue: state.venue) }
+    func makeCoordinator() -> ClubScene { ClubScene(venue: state.venue, characters: state.characters) }
 
     func makeUIView(context: Context) -> SCNView {
         let v = SCNView(frame: .zero)
@@ -230,6 +231,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var st = BoothState(owner: 0, currentID: nil, nextID: nil, nextHidden: false, phase: .searchingTrack,
                                 selector: 0, energy: 50, venue: .smallClub, current: nil, next: nil)
     private let venue: Venue
+    private let characters: [String]
 
     private let gear = SCNNode()
     private var platters: [SCNNode] = []
@@ -259,7 +261,6 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var movers: [SCNNode] = []
     private var lasers: [SCNNode] = []
     private let ambient = SCNNode()
-    private let strobe = SCNNode()
     private var confetti: SCNParticleSystem?
     private var ledWall: SCNNode?
     private var hazes: [SCNNode] = []
@@ -272,8 +273,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var loading: Set<String> = []
     private var lastApplied: BoothState?
 
-    init(venue: Venue) {
+    init(venue: Venue, characters: [String] = ["c09", "c02"]) {
         self.venue = venue
+        self.characters = characters.count == 2 ? characters : ["c09", "c02"]
         super.init()
         build()
     }
@@ -351,6 +353,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     static func preload() {
         buildQueue.asyncAfter(deadline: .now() + 1.5) {
             for n in nearNames { _ = template(n, lod: false) }
+            for c in DJCharacter.all where !nearNames.contains(c.id) { _ = template(c.id, lod: false) }
             for i in 1...18 { _ = template(String(format: "c%02d", i), lod: true) }
         }
     }
@@ -545,8 +548,15 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             guard let g = node.geometry else { return }
             let lname = (node.name ?? "").lowercased()
             let alpha = ["bob", "afro", "ponytail", "long", "short", "braid", "eyebrow", "eyelash", "fedora"].contains { lname.contains($0) }
+            let isSkin = lname.contains("generic") || lname.hasSuffix(".body")
             for m in g.materials {
-                pbrS(m, rough: lname.contains("generic") ? 0.55 : 0.75)
+                let mn = (m.name ?? "").lowercased()
+                if mn.contains("robo") {
+                    robotMaterial(m, mn)
+                    continue
+                }
+                pbrS(m, rough: isSkin ? 0.5 : 0.75)
+                if isSkin { skinMaterial(m) }
                 if alpha {
                     m.transparencyMode = .aOne
                     m.blendMode = .alpha
@@ -557,6 +567,45 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
         templateCache[file] = n
         return n
+    }
+
+    // 肌：毛穴の凹凸・つやの揺らぎ・うっすら脂っぽさ・縁が赤く透ける感じ
+    private static let skinNormal = UIImage(named: "skin_detail_normal")
+    private static let skinRough = UIImage(named: "skin_detail_rough")
+
+    private static func skinMaterial(_ m: SCNMaterial) {
+        let tile = SCNMatrix4MakeScale(22, 22, 1)
+        if let n = skinNormal {
+            m.normal.contents = n
+            m.normal.contentsTransform = tile
+            m.normal.wrapS = .repeat; m.normal.wrapT = .repeat
+            m.normal.intensity = 0.55
+        }
+        if let r = skinRough {
+            m.roughness.contents = r
+            m.roughness.contentsTransform = tile
+            m.roughness.wrapS = .repeat; m.roughness.wrapT = .repeat
+        }
+        m.clearCoat.contents = 0.12
+        m.clearCoatRoughness.contents = 0.38
+        m.shaderModifiers = [.fragment: """
+        float ndv = saturate(dot(_surface.normal, _surface.view));
+        float rim = pow(1.0 - ndv, 2.6);
+        _output.color.rgb += _surface.diffuse.rgb * float3(0.6, 0.14, 0.08) * rim * 0.32;
+        """]
+    }
+
+    private static func robotMaterial(_ m: SCNMaterial, _ n: String) {
+        m.lightingModel = .physicallyBased
+        if n.contains("chrome") { m.metalness.contents = 1.0; m.roughness.contents = 0.1 }
+        else if n.contains("white") { m.metalness.contents = 0.0; m.roughness.contents = 0.22; m.clearCoat.contents = 0.6; m.clearCoatRoughness.contents = 0.1 }
+        else if n.contains("orange") { m.metalness.contents = 0.25; m.roughness.contents = 0.38; m.clearCoat.contents = 0.4 }
+        else if n.contains("glow") || n.contains("lamp") {
+            let c: UIColor = n.contains("cyan") ? UIColor(red: 0.2, green: 0.85, blue: 1, alpha: 1)
+                : n.contains("pink") ? UIColor(red: 1, green: 0.25, blue: 0.65, alpha: 1) : UIColor(red: 1, green: 0.85, blue: 0.3, alpha: 1)
+            m.emission.contents = c
+            m.emission.intensity = 2.5
+        } else { m.metalness.contents = 0.6; m.roughness.contents = 0.3 }
     }
 
     /// スキン付きノードを複製し、骨の参照を複製側に付け替える
@@ -670,12 +719,12 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         phoneMat.isDoubleSided = true
         var arms: [[ArmRig]] = []
         // DJ A は左、DJ B は右。観客側（-z）を向いてブースの手前に立つ
-        let setups: [(String, Float)] = [("c09", -0.42), ("c02", 0.42)]
+        let setups: [(String, Float)] = [(characters[0], -0.42), (characters[1], 0.42)]
         let boneNames = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftShoulder", "RightShoulder",
                          "LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot"]
         for (k, (name, cx)) in setups.enumerated() {
             guard let t = loadCharacter(name) else { arms.append([]); continue }
-            let dj = cloneSkinned(t, tint: k == 0 ? UIColor(white: 0.18, alpha: 1) : UIColor(red: 0.2, green: 0.22, blue: 0.3, alpha: 1))
+            let dj = cloneSkinned(t)
             dj.position = SCNVector3(cx, -1.02, 0.5)
             dj.eulerAngles.y = .pi
             parent.addChildNode(dj)
@@ -739,9 +788,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
         // ムービングライト（光の筋つき）
         let beamImg = Self.beamImage()
-        for i in 0..<6 {
+        for i in 0..<4 {
             let n = SCNNode()
-            let color = UIColor(hue: CGFloat(i) / 6, saturation: 0.8, brightness: 1, alpha: 1)
+            let color = UIColor(hue: CGFloat(i) / 4 + 0.05, saturation: 0.8, brightness: 1, alpha: 1)
             n.light = SCNLight()
             n.light?.type = .spot
             n.light?.intensity = 0
@@ -749,7 +798,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             n.light?.spotOuterAngle = 22
             n.light?.attenuationEndDistance = 14
             n.light?.color = color
-            n.position = SCNVector3(-5 + Float(i) * 2, 3.25, i % 2 == 0 ? -3 : -7.5)
+            n.position = SCNVector3(-4.5 + Float(i) * 3, 3.25, i % 2 == 0 ? -3 : -7.5)
             let beam = SCNNode(geometry: SCNCone(topRadius: 0.05, bottomRadius: 1.4, height: 9))
             let bm = SCNMaterial()
             bm.lightingModel = .constant
@@ -788,12 +837,6 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             lasers.append(n)
         }
 
-        strobe.light = SCNLight()
-        strobe.light?.type = .omni
-        strobe.light?.intensity = 0
-        strobe.light?.color = UIColor.white
-        strobe.position = SCNVector3(0, 3, -4)
-        scene.rootNode.addChildNode(strobe)
 
         // 紙吹雪（LEGENDARY のときだけ）
         let ps = SCNParticleSystem()
@@ -1115,7 +1158,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let e = Float(energy / 100)
         ambient.light?.intensity = CGFloat(40 + e * 90)
         for (i, m) in movers.enumerated() {
-            let active = Float(i) < e * 7
+            let active = Float(i) < e * 5
             let target: CGFloat = active ? CGFloat(1500 + e * 2500) : 0
             let cur = m.light?.intensity ?? 0
             m.light?.intensity = cur + (target - cur) * 0.1
@@ -1143,7 +1186,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             }
         }
         let legend = energy >= 99.5
-        strobe.light?.intensity = legend && sin(t * 24) > 0.85 ? 4000 : 0
+        if legend && sin(t * 24) > 0.85 { ambient.light?.intensity = 900 }   // ストロボ
         confetti?.birthRate = legend ? 220 : 0
         for (k, h) in hazes.enumerated() {
             h.opacity = CGFloat(0.08 + e * 0.18 + sin(t * 0.3 + Float(k)) * 0.03)

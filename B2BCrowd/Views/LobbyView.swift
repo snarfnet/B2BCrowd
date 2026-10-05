@@ -25,6 +25,11 @@ struct LobbyView: View {
                         djField(1)
                     }
 
+                    section(L.t("キャラ", "CHARACTER")) {
+                        characterRow(0)
+                        characterRow(1)
+                    }
+
                     section("MODE") {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                             ForEach(GameMode.allCases) { m in modeCard(m) }
@@ -142,6 +147,43 @@ struct LobbyView: View {
                     }
                 } label: {
                     Image(systemName: "person.crop.circle").font(.title2)
+                }
+            }
+        }
+    }
+
+    private func characterRow(_ dj: Int) -> some View {
+        let tint: Color = dj == 0 ? .pink : .cyan
+        let selected = app.config.characters.count == 2 ? app.config.characters[dj] : (dj == 0 ? "c09" : "c02")
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("\(dj == 0 ? "A" : "B") · \(app.config.djNames[dj]) — \(DJCharacter.named(selected).name)")
+                .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                .foregroundStyle(tint)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(DJCharacter.all) { c in
+                        Button {
+                            if app.config.characters.count != 2 { app.config.characters = ["c09", "c02"] }
+                            app.config.characters[dj] = c.id
+                        } label: {
+                            VStack(spacing: 3) {
+                                Group {
+                                    if let img = UIImage(named: "char_\(c.id)") {
+                                        Image(uiImage: img).resizable().scaledToFill()
+                                    } else {
+                                        Color.white.opacity(0.1)
+                                    }
+                                }
+                                .frame(width: 66, height: 66)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(c.id == selected ? tint : .white.opacity(0.1), lineWidth: c.id == selected ? 3 : 1))
+                                Text(c.name).font(.system(size: 9, weight: .bold, design: .monospaced)).lineLimit(1)
+                                    .foregroundStyle(c.id == selected ? tint : .white.opacity(0.7))
+                            }
+                            .frame(width: 70)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
