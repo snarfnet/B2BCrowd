@@ -1300,7 +1300,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
 
     private static func confettiCannon(toward dir: Float) -> SCNParticleSystem {
-        let ps = oneShot(320, over: 0.25)
+        let ps = oneShot(170, over: 0.25)
         ps.blendMode = .alpha
         ps.emittingDirection = SCNVector3(dir * 0.16, 1, -0.1)
         ps.spreadingAngle = 16
@@ -1310,8 +1310,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         ps.particleVelocityVariation = 2
         ps.dampingFactor = 1.4
         ps.acceleration = SCNVector3(0, -2.2, 0)
-        ps.particleSize = 0.04
-        ps.particleSizeVariation = 0.015
+        ps.particleSize = 0.022
+        ps.particleSizeVariation = 0.008
         ps.particleAngularVelocity = 500
         ps.particleAngularVelocityVariation = 400
         ps.particleColor = UIColor(red: 1, green: 0.85, blue: 0.2, alpha: 1)
