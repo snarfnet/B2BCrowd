@@ -53,14 +53,17 @@ jobs:
         run title; sleep 15; shot 01_title
         run lobby; sleep 3; shot 02a_lobby_3s
         sleep 5; shot 02_lobby
+        rec() { xcrun simctl io "$UDID" recordVideo --codec=h264 --force "shots/$1.mp4" & REC=$!; sleep 1; }
+        stop() { kill -INT $REC; wait $REC || true; }
+        rec 20_lobby_to_session; run lobby; sleep 6
         run session; sleep 5; shot 03_transition
         sleep 8; shot 04_playing
         sleep 20; shot 05_later
         sleep 25; shot 06_hot
-        sleep 30; shot 07_hotter
+        sleep 30; shot 07_hotter; stop
         run session -vjcam; sleep 14; shot 11_vj
-        run session -boothcam; sleep 12; shot 09_booth_a
-        sleep 15; shot 10_booth_b
+        rec 21_booth; run session -boothcam; sleep 12; shot 09_booth_a
+        sleep 15; shot 10_booth_b; stop
         run result; sleep 125; shot 08_result
         xcrun simctl spawn "$UDID" log show --last 15m --predicate 'process == "B2BCrowd"' --style compact > shots/app.log 2>&1 || true
         mkdir -p shots/crash
