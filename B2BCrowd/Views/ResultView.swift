@@ -42,7 +42,7 @@ struct ResultView: View {
                 setlist
 
                 if let img = shareImage {
-                    ShareLink(item: img, preview: SharePreview("B2B CROWD", image: img)) {
+                    ShareLink(item: img, preview: SharePreview("B2B CROWD DUO", image: img)) {
                         Label(L.t("リザルトをシェア", "Share result"), systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(NeonButtonStyle(color: .cyan, filled: false))
@@ -145,7 +145,7 @@ struct ShareCard: View {
         ZStack {
             LinearGradient(colors: [Color(red: 0.12, green: 0.02, blue: 0.18), .black], startPoint: .top, endPoint: .bottom)
             VStack(spacing: 14) {
-                LEDText(text: "B2B CROWD", size: 30, color: .pink)
+                LEDText(text: "B2B CROWD DUO", size: 26, color: .pink)
                 Text(game.config.mode.title + " · " + game.config.venue.title)
                     .font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(.white.opacity(0.7))
                 HStack(spacing: 18) {

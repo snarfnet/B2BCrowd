@@ -1,4 +1,4 @@
-# B2B CROWD セットアップ
+# B2B CROWD DUO セットアップ
 
 ## ビルド
 

@@ -17,6 +17,7 @@ struct TitleView: View {
                 VStack(spacing: 6) {
                     LEDText(text: "B2B", size: 64, color: .pink)
                     LEDText(text: "CROWD", size: 52, color: .cyan)
+                    LEDText(text: "DUO", size: 34, color: .purple)
                     Text(L.t("選曲だけでフロアを100%まで沸かせ", "Move the floor to 100% with selection alone"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.8))
