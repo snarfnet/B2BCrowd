@@ -68,6 +68,7 @@ final class AppModel {
             c.playLimit = 30
             c.crowd = .mix
             c.venue = .tokyoNight
+            c.characters = args[i + 1] == "result" ? ["c09", "c02"] : ["r02", "c12"]
             config = c
             let engine = GameEngine(config: c, player: music.player)
             engine.autopilot = true

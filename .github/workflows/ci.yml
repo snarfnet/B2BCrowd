@@ -51,7 +51,8 @@ jobs:
         shot() { xcrun simctl io "$UDID" screenshot "shots/$1.png"; }
         run() { xcrun simctl terminate "$UDID" com.tokyonasu.B2BCrowd || true; xcrun simctl launch "$UDID" com.tokyonasu.B2BCrowd -AppleLanguages "(ja)" -shot "$@"; }
         run title; sleep 15; shot 01_title
-        run lobby; sleep 4; shot 02_lobby
+        run lobby; sleep 3; shot 02a_lobby_3s
+        sleep 5; shot 02_lobby
         run session; sleep 5; shot 03_transition
         sleep 8; shot 04_playing
         sleep 20; shot 05_later

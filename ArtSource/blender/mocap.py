@@ -97,6 +97,20 @@ BONES = {
     "RightUpLeg": ("RightUpLeg", "RightLeg"), "RightLeg": ("RightLeg", "RightFoot"), "RightFoot": ("RightFoot", "RightToeBase"),
 }
 
+def clamp_tilt(d, max_deg):
+    """縦からの傾きを max_deg までに抑える（人混みで寝転がって見えないように）"""
+    up = np.array([0, 0, 1.0])
+    d = d / np.linalg.norm(d)
+    ang = math.acos(max(-1.0, min(1.0, float(d @ up))))
+    lim = math.radians(max_deg)
+    if ang <= lim:
+        return d
+    h = d - up * (d @ up)
+    if np.linalg.norm(h) < 1e-6:
+        return up
+    h /= np.linalg.norm(h)
+    return up * math.cos(lim) + h * math.sin(lim)
+
 def to_blender(v):
     # BVH（y 上）→ Blender（z 上）
     return np.array([v[0], -v[2], v[1]])
@@ -136,14 +150,17 @@ def clip(path, start_s, length_s, fps=30, blend_s=0.6):
             if a in p and e in p:
                 d = p[e] - p[a]
                 if np.linalg.norm(d) > 1e-6:
-                    dirs[b] = d / np.linalg.norm(d)
+                    d = d / np.linalg.norm(d)
+                    if b in ("Spine", "Spine1", "Spine2", "Neck", "Head"):
+                        d = clamp_tilt(d, 30)
+                    dirs[b] = d
         hip_side = p["LeftUpLeg"] - p["RightUpLeg"]
         chest_side = p["LeftArm"] - p["RightArm"]
         off = np.zeros(3)
         off[:2] = np.clip((hips[i, :2] - smooth[i]) * scale, -0.12, 0.12)
         off[2] = np.clip((hips[i, 2] - base_z) * scale, -0.25, 0.3)
         hip_up = p["Spine"] - p["Hips"] if "Spine" in p else np.array([0, 0, 1.0])
-        out.append(dict(dirs=dirs, hip_up=hip_up / np.linalg.norm(hip_up), hip_side=hip_side / np.linalg.norm(hip_side),
+        out.append(dict(dirs=dirs, hip_up=clamp_tilt(hip_up, 20), hip_side=hip_side / np.linalg.norm(hip_side),
                         chest_side=chest_side / np.linalg.norm(chest_side), hips=off))
     # ループ：最後の blend 分を最初へ混ぜる
     nb = int(blend_s * fps)
