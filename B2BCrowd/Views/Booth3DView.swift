@@ -40,6 +40,7 @@ struct Booth3DView: UIViewRepresentable {
         let club = context.coordinator
         club.view = v
         club.videoHost = box
+        box.bandTop = state.venue == .forestRave ? 0.70 : state.venue == .recordShop ? 0.68 : 0.72
         // シェーダーの準備を裏で済ませてから表示（起動直後に固まらないように）
         v.prepare([club.scene]) { _ in
             DispatchQueue.main.async { v.scene = club.scene }
@@ -75,6 +76,8 @@ final class ClubContainerView: UIView {
     let sceneView = SCNView(frame: .zero)
     let videoLayers = [AVPlayerLayer(), AVPlayerLayer()]
     static let videoAspect: CGFloat = 704.0 / 1280.0
+    /// 動画の中でブースの黒い縁が始まる高さ（上から。会場ごとに少し違う）
+    var bandTop: CGFloat = 0.72 { didSet { setNeedsLayout() } }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -100,7 +103,7 @@ final class ClubContainerView: UIView {
         if W / H >= Self.videoAspect {
             // 横に広い画面：幅に合わせ、動画の黒い縁（上から約72%）がブースの天板（画面の約64%）に来るよう上下を決める
             let h = W / Self.videoAspect
-            let top = min(0, max(H - h, 0.64 * H - 0.72 * h))
+            let top = min(0, max(H - h, 0.64 * H - bandTop * h))
             f = CGRect(x: 0, y: top, width: W, height: h)
         } else {
             let w = H * Self.videoAspect
@@ -1491,7 +1494,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
 
     private static func confettiCannon(toward dir: Float) -> SCNParticleSystem {
-        let ps = oneShot(170, over: 0.25)
+        let ps = oneShot(Self.videoMode ? 70 : 170, over: 0.25)
         ps.blendMode = .alpha
         ps.emittingDirection = SCNVector3(dir * 0.16, 1, -0.1)
         ps.spreadingAngle = 16
@@ -1879,7 +1882,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let legend = energy >= 99.5
         // A gentle light swell keeps detail visible during the finale.
         if legend { ambient.light?.intensity = CGFloat(52 + 12 * (0.5 + 0.5 * sin(t * 2.4))) }
-        confetti?.birthRate = legend ? 150 : 0
+        // 動画の LEGENDARY には本物の紙吹雪が写っているので、3D の紙吹雪は 3D 観客のときだけ
+        confetti?.birthRate = legend && !Self.videoMode ? 150 : 0
         for (k, h) in hazes.enumerated() {
             h.opacity = CGFloat(0.035 + e * 0.075 + sin(t * 0.3 + Float(k)) * 0.015)
             h.position.x = sin(t * 0.07 + Float(k) * 2) * 1.2
