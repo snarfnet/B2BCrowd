@@ -33,6 +33,8 @@ targets:
       properties:
         CFBundleName: B2BCrowd
         CFBundleDisplayName: B2B CROWD DUO
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDevelopmentRegion: ja
         CFBundleLocalizations: [ja, en]
         ITSAppUsesNonExemptEncryption: false
