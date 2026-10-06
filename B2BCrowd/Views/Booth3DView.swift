@@ -34,17 +34,21 @@ struct Booth3DView: UIViewRepresentable {
 
     func makeCoordinator() -> ClubScene { ClubScene(venue: state.venue, characters: state.characters) }
 
-    func makeUIView(context: Context) -> SCNView {
-        let v = SCNView(frame: .zero)
+    func makeUIView(context: Context) -> ClubContainerView {
+        let box = ClubContainerView()
+        let v = box.sceneView
         let club = context.coordinator
         club.view = v
+        club.videoHost = box
         // シェーダーの準備を裏で済ませてから表示（起動直後に固まらないように）
         v.prepare([club.scene]) { _ in
             DispatchQueue.main.async { v.scene = club.scene }
         }
         v.pointOfView = club.cameraNode
         v.delegate = club
-        v.backgroundColor = .black
+        // 観客を動画で見せるときは 3D の背景を透明にし、後ろの動画レイヤーを見せる
+        v.backgroundColor = ClubScene.videoMode ? .clear : .black
+        v.isOpaque = !ClubScene.videoMode
         v.antialiasingMode = .multisampling4X
         v.rendersContinuously = true
         v.isPlaying = true
@@ -52,15 +56,60 @@ struct Booth3DView: UIViewRepresentable {
         v.preferredFramesPerSecond = 30
         club.apply(state)
         club.startWatchdog()
-        return v
+        club.startCrowdVideo()
+        return box
     }
 
-    func updateUIView(_ v: SCNView, context: Context) {
+    func updateUIView(_ v: ClubContainerView, context: Context) {
         context.coordinator.apply(state)
     }
 
-    static func dismantleUIView(_ v: SCNView, coordinator: ClubScene) {
+    static func dismantleUIView(_ v: ClubContainerView, coordinator: ClubScene) {
         coordinator.stopWatchdog()
+    }
+}
+
+// 観客の実写ループ動画（2枚を重ねてクロスフェード）と、その上の透明な 3D。
+// 動画は SceneKit に渡さず Core Animation のレイヤーで出す（描画スレッドと取り合わない）。
+final class ClubContainerView: UIView {
+    let sceneView = SCNView(frame: .zero)
+    let videoLayers = [AVPlayerLayer(), AVPlayerLayer()]
+    static let videoAspect: CGFloat = 704.0 / 1280.0
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .black
+        clipsToBounds = true
+        for l in videoLayers {
+            l.videoGravity = .resizeAspectFill
+            l.opacity = 0
+            layer.addSublayer(l)
+        }
+        sceneView.frame = bounds
+        sceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(sceneView)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let W = bounds.width, H = bounds.height
+        guard W > 0, H > 0 else { return }
+        var f: CGRect
+        if W / H >= Self.videoAspect {
+            // 横に広い画面：幅に合わせ、動画の黒い縁（上から約72%）がブースの天板（画面の約64%）に来るよう上下を決める
+            let h = W / Self.videoAspect
+            let top = min(0, max(H - h, 0.64 * H - 0.72 * h))
+            f = CGRect(x: 0, y: top, width: W, height: h)
+        } else {
+            let w = H * Self.videoAspect
+            f = CGRect(x: (W - w) / 2, y: 0, width: w, height: H)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for l in videoLayers { l.frame = f }
+        CATransaction.commit()
     }
 }
 
@@ -335,7 +384,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         watchdog?.invalidate()
         watchdog = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self, let v = self.view, v.window != nil,
+                guard let self, let v = self.view, v.window != nil, v.scene != nil,
                       UIApplication.shared.applicationState == .active else { return }
                 self.lock.lock(); let last = self.lastFrameAt; self.lock.unlock()
                 guard last > 0, CACurrentMediaTime() - last > 2 else { return }
@@ -362,15 +411,12 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
     static let videoMode = crowdVideoURLs(for: .smallClub).count == 6 && !ProcessInfo.processInfo.arguments.contains("-crowd3d")
     private lazy var videoURLs = Self.crowdVideoURLs(for: venue)
-    private let videoDistance: Float = 6
-    private let videoAspect: Float = 704.0 / 1280.0
-    private var videoNodes: [SCNNode] = []
+    weak var videoHost: ClubContainerView?
     private var videoTop = 0
     private var videoTierShown = -1
     private var videoWant = -1
     private var videoWantSince: TimeInterval = 0
     private var videoSwitching = false
-    private var videoLayoutAspect: Float = 0
     private var videoPlayers: [Int: (player: AVQueuePlayer, looper: AVPlayerLooper)] = [:]
     // VJ 卓（フロア左手前の台の上）
     private let vjDesk = SIMD3<Float>(-2.6, 0.22, -3.25)   // 卓の天板の中心
@@ -454,7 +500,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             }
             for m in movers { m.childNode(withName: "beam", recursively: false)?.isHidden = true }
             for l in lasers { l.isHidden = true }
-            setupCrowdVideo()
+            scene.background.contents = UIColor.clear
         }
         // 機材と人物は重いので裏で読み込み、できたらまとめて足す（画面が固まらないように）
         Self.buildQueue.async { [self] in
@@ -1251,36 +1297,16 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     // MARK: 観客の実写動画
 
-    private func setupCrowdVideo() {
-        for i in 0..<2 {
-            let m = SCNMaterial()
-            m.lightingModel = .constant
-            m.diffuse.contents = UIColor.black
-            m.readsFromDepthBuffer = false
-            m.writesToDepthBuffer = false
-            let n = SCNNode(geometry: SCNPlane(width: 1, height: 1))
-            n.geometry?.materials = [m]
-            n.renderingOrder = -20 + i
-            n.position = SCNVector3(0, 0, -videoDistance)
-            n.opacity = i == 0 ? 1 : 0
-            n.castsShadow = false
-            cameraNode.addChildNode(n)
-            videoNodes.append(n)
-        }
-        let first = EnergyTier(72).rawValue
-        DispatchQueue.main.async { [self] in showVideo(first, fade: false) }
+    /// 最初の段階の動画を出す（メインスレッド）
+    @MainActor
+    func startCrowdVideo() {
+        guard Self.videoMode, videoTierShown < 0 else { return }
+        lock.lock(); let e = st.energy; lock.unlock()
+        showVideo(EnergyTier(Double(e)).rawValue, fade: false)
     }
 
-    /// 描画スレッド：画面の縦横比に合わせて板を覆うように広げ、エネルギーの段階が 1.5 秒続いたら切り替える
-    private func updateCrowdVideo(_ renderer: SCNSceneRenderer, time: TimeInterval, energy: Double) {
-        let vp = renderer.currentViewport
-        if vp.width > 0, vp.height > 0 {
-            let aspect = Float(vp.width / vp.height)
-            if abs(aspect - videoLayoutAspect) > 0.002 {
-                videoLayoutAspect = aspect
-                layoutVideo(aspect)
-            }
-        }
+    /// 描画スレッド：エネルギーの段階が 1.5 秒続いたら動画を切り替える
+    private func updateCrowdVideo(time: TimeInterval, energy: Double) {
         let tier = EnergyTier(energy).rawValue
         lock.lock()
         if tier != videoWant { videoWant = tier; videoWantSince = time }
@@ -1288,28 +1314,6 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         if go { videoSwitching = true }
         lock.unlock()
         if go { DispatchQueue.main.async { [self] in showVideo(tier, fade: true) } }
-    }
-
-    private func layoutVideo(_ aspect: Float) {
-        let fov = Float(cameraNode.camera?.fieldOfView ?? 60) * .pi / 180
-        let H = 2 * videoDistance * tan(fov / 2)
-        var w: Float, h: Float, y: Float = 0
-        if aspect >= videoAspect {
-            // 横に広い画面：幅に合わせて上下を切る。動画の黒い縁（下から約28%）がブースの天板の高さに来るよう上げる
-            w = H * aspect
-            h = w / videoAspect
-            let vis = H / h
-            let top = min(max(0.72 - 0.64 * vis, 0), 1 - vis)
-            y = (top + vis / 2 - 0.5) * h
-        } else {
-            h = H
-            w = H * videoAspect
-        }
-        for n in videoNodes {
-            (n.geometry as? SCNPlane)?.width = CGFloat(w)
-            (n.geometry as? SCNPlane)?.height = CGFloat(h)
-            n.position = SCNVector3(0, y, -videoDistance)
-        }
     }
 
     @MainActor
@@ -1327,33 +1331,30 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     @MainActor
     private func showVideo(_ tier: Int, fade: Bool) {
-        guard videoNodes.count == 2, let player = videoPlayer(tier) else {
+        guard let host = videoHost, let player = videoPlayer(tier) else {
             lock.lock(); videoSwitching = false; lock.unlock()
             return
         }
         let old = videoTierShown
         player.play()
         let back = 1 - videoTop
-        let top = videoNodes[videoTop], next = videoNodes[back]
-        let mat = next.geometry?.firstMaterial
+        let top = host.videoLayers[videoTop], next = host.videoLayers[back]
         videoTop = back
-        onRender {
-            mat?.diffuse.contents = player
-            next.renderingOrder = -19
-            top.renderingOrder = -20
-            next.removeAllActions()
-            if fade {
-                next.opacity = 0
-                next.runAction(.fadeIn(duration: 1.2))
-            } else {
-                next.opacity = 1
-            }
-        }
+        next.player = player
+        next.removeAllAnimations()
+        host.layer.insertSublayer(next, above: top)
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(fade ? 1.2 : 0)
+        next.opacity = 1
+        CATransaction.commit()
         lock.lock(); videoTierShown = tier; lock.unlock()
-        DispatchQueue.main.asyncAfter(deadline: .now() + (fade ? 1.4 : 0.1)) { [self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + (fade ? 1.3 : 0.05)) { [self] in
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            top.opacity = 0
+            if top.player !== player { top.player = nil }
+            CATransaction.commit()
             if old >= 0, old != tier { videoPlayers[old]?.player.pause() }
-            let prevMat = top.geometry?.firstMaterial
-            onRender { top.opacity = 0; prevMat?.diffuse.contents = UIColor.black }
             lock.lock(); videoSwitching = false; lock.unlock()
         }
     }
@@ -1683,7 +1684,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         lastFrameAt = CACurrentMediaTime()
         lock.unlock()
         for job in jobs { job() }
-        if Self.videoMode { updateCrowdVideo(renderer, time: time, energy: Double(s.energy)) }
+        if Self.videoMode { updateCrowdVideo(time: time, energy: Double(s.energy)) }
         guard isReady else { return }
         let t = Float(time.truncatingRemainder(dividingBy: 10000))
         let energy = Double(s.energy)
