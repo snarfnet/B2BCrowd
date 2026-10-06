@@ -11,3 +11,6 @@ shots*/
 
 # 秘密情報
 Config/Secrets.xcconfig
+
+# 生成ログ
+ArtSource/**/*.log

@@ -206,7 +206,7 @@ enum CrowdMode: String, CaseIterable, Identifiable, Codable {
 // MARK: - Venue
 
 enum Venue: String, CaseIterable, Identifiable, Codable {
-    case smallClub, underground, warehouse, rooftop, beach, tokyoNight, cyberClub, megaFestival, spaceClub
+    case smallClub, underground, warehouse, rooftop, beach, tokyoNight, cyberClub, megaFestival, spaceClub, forestRave, recordShop
     var id: String { rawValue }
 
     var title: String {
@@ -220,6 +220,8 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
         case .cyberClub: return "CYBER CLUB"
         case .megaFestival: return "MEGA FESTIVAL"
         case .spaceClub: return "SPACE CLUB"
+        case .forestRave: return "FOREST RAVE"
+        case .recordShop: return "RECORD SHOP"
         }
     }
 
@@ -235,12 +237,15 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
         case .cyberClub: return (Color(red: 0.0, green: 0.10, blue: 0.14), Color(red: 0.0, green: 0.02, blue: 0.04), .cyan)
         case .megaFestival: return (Color(red: 0.08, green: 0.10, blue: 0.30), Color(red: 0.02, green: 0.02, blue: 0.06), .green)
         case .spaceClub: return (Color(red: 0.02, green: 0.0, blue: 0.08), .black, Color(red: 0.6, green: 0.5, blue: 1))
+        case .forestRave: return (Color(red: 0.03, green: 0.08, blue: 0.05), Color(red: 0.01, green: 0.02, blue: 0.01), Color(red: 0.5, green: 1, blue: 0.4))
+        case .recordShop: return (Color(red: 0.14, green: 0.08, blue: 0.04), Color(red: 0.03, green: 0.02, blue: 0.01), Color(red: 1, green: 0.7, blue: 0.35))
         }
     }
 
     var crowdSize: Int {
         switch self {
-        case .smallClub, .underground: return 26
+        case .smallClub, .underground, .recordShop: return 26
+        case .forestRave: return 38
         case .warehouse, .rooftop, .beach, .tokyoNight, .cyberClub: return 38
         case .megaFestival, .spaceClub: return 52
         }

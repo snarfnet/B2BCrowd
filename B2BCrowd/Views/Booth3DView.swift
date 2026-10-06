@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import SceneKit
 import simd
@@ -349,6 +350,28 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
     private let fxLight = SCNNode()
     private var fxFlash: Float = 0
+
+    // MARK: 観客の実写動画
+    // 観客は 3D ではなく、盛り上がりの段階（CROWD ENERGY の6段階）ごとの実写風ループ動画を
+    // カメラの奥に貼って見せる。手前のブース・DJ・手・パーティクルは 3D のまま重なる。
+    /// 会場専用の動画（crowd_<会場>_t0..5）があればそれ、無ければクラブの共通動画（crowd_t0..5）
+    static func crowdVideoURLs(for venue: Venue) -> [URL] {
+        let own = (0..<6).compactMap { Bundle.main.url(forResource: "crowd_\(venue.rawValue)_t\($0)", withExtension: "mp4") }
+        if own.count == 6 { return own }
+        return (0..<6).compactMap { Bundle.main.url(forResource: "crowd_t\($0)", withExtension: "mp4") }
+    }
+    static let videoMode = crowdVideoURLs(for: .smallClub).count == 6 && !ProcessInfo.processInfo.arguments.contains("-crowd3d")
+    private lazy var videoURLs = Self.crowdVideoURLs(for: venue)
+    private let videoDistance: Float = 6
+    private let videoAspect: Float = 704.0 / 1280.0
+    private var videoNodes: [SCNNode] = []
+    private var videoTop = 0
+    private var videoTierShown = -1
+    private var videoWant = -1
+    private var videoWantSince: TimeInterval = 0
+    private var videoSwitching = false
+    private var videoLayoutAspect: Float = 0
+    private var videoPlayers: [Int: (player: AVQueuePlayer, looper: AVPlayerLooper)] = [:]
     // VJ 卓（フロア左手前の台の上）
     private let vjDesk = SIMD3<Float>(-2.6, 0.22, -3.25)   // 卓の天板の中心
     private var laptopMat: SCNMaterial?
@@ -421,8 +444,18 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         scene.fogEndDistance = 22
         scene.fogDensityExponent = 1.4
 
+        let before = Set(scene.rootNode.childNodes.map(ObjectIdentifier.init))
         buildVenue()
         buildLights()
+        if Self.videoMode {
+            // 床・壁・LED・スモーク・光の筋は動画に写っているので隠す（照明そのものはブースを照らすので残す）
+            for n in scene.rootNode.childNodes where !before.contains(ObjectIdentifier(n)) && n.light == nil && n !== fxLight {
+                n.isHidden = true
+            }
+            for m in movers { m.childNode(withName: "beam", recursively: false)?.isHidden = true }
+            for l in lasers { l.isHidden = true }
+            setupCrowdVideo()
+        }
         // 機材と人物は重いので裏で読み込み、できたらまとめて足す（画面が固まらないように）
         Self.buildQueue.async { [self] in
             buildGear()
@@ -466,6 +499,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     /// アプリ起動時に人物を先に読んでおく（起動の邪魔をしないよう少し待ってから）
     static func preload() {
         buildQueue.asyncAfter(deadline: .now() + 1.5) {
+            if videoMode {
+                for c in DJCharacter.all { _ = template(c.id, lod: false) }
+                return
+            }
             for n in nearNames { _ = template(n, lod: false) }
             for c in DJCharacter.all where !nearNames.contains(c.id) { _ = template(c.id, lod: false) }
             for i in 1...18 { _ = template(String(format: "c%02d", i), lod: true) }
@@ -870,6 +907,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     }
 
     private func buildCrowd(into parent: SCNNode) -> [Person] {
+        if Self.videoMode { return [] }
         var people: [Person] = []
         let phoneMat = SCNMaterial()
         phoneMat.lightingModel = .constant
@@ -986,6 +1024,9 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let vjName = ["c13", "c16", "c05", "c12"].first { !characters.contains($0) } ?? "c13"
         let desk = vjDesk
         let deskM = SCNMaterial(); deskM.diffuse.contents = UIColor(white: 0.05, alpha: 1); pbr(deskM, rough: 0.55)
+        let deskRoot = SCNNode()
+        deskRoot.isHidden = Self.videoMode
+        let parent = Self.videoMode ? deskRoot : parent
         let riser = SCNNode(geometry: SCNBox(width: 1.6, height: 0.3, length: 1.4, chamferRadius: 0.01))
         riser.geometry?.materials = [deskM]
         riser.simdPosition = SIMD3(desk.x, -0.87, desk.z + 0.35)
@@ -1023,7 +1064,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             pad.simdPosition = SIMD3(Float(i % 4) * 0.045 - 0.0675, 0.018, Float(i / 4) * 0.045 - 0.022)
             ctrl.addChildNode(pad)
         }
-        if let t = loadCharacter(vjName) {
+        if !Self.videoMode, let t = loadCharacter(vjName) {
             let vj = cloneSkinned(t)
             vj.simdPosition = SIMD3(desk.x - 0.05, -0.72, desk.z + 0.5)
             vj.eulerAngles.y = .pi
@@ -1206,6 +1247,115 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         smn.addParticleSystem(sm)
         scene.rootNode.addChildNode(smn)
         smoke = sm
+    }
+
+    // MARK: 観客の実写動画
+
+    private func setupCrowdVideo() {
+        for i in 0..<2 {
+            let m = SCNMaterial()
+            m.lightingModel = .constant
+            m.diffuse.contents = UIColor.black
+            m.readsFromDepthBuffer = false
+            m.writesToDepthBuffer = false
+            let n = SCNNode(geometry: SCNPlane(width: 1, height: 1))
+            n.geometry?.materials = [m]
+            n.renderingOrder = -20 + i
+            n.position = SCNVector3(0, 0, -videoDistance)
+            n.opacity = i == 0 ? 1 : 0
+            n.castsShadow = false
+            cameraNode.addChildNode(n)
+            videoNodes.append(n)
+        }
+        let first = EnergyTier(72).rawValue
+        DispatchQueue.main.async { [self] in showVideo(first, fade: false) }
+    }
+
+    /// 描画スレッド：画面の縦横比に合わせて板を覆うように広げ、エネルギーの段階が 1.5 秒続いたら切り替える
+    private func updateCrowdVideo(_ renderer: SCNSceneRenderer, time: TimeInterval, energy: Double) {
+        let vp = renderer.currentViewport
+        if vp.width > 0, vp.height > 0 {
+            let aspect = Float(vp.width / vp.height)
+            if abs(aspect - videoLayoutAspect) > 0.002 {
+                videoLayoutAspect = aspect
+                layoutVideo(aspect)
+            }
+        }
+        let tier = EnergyTier(energy).rawValue
+        lock.lock()
+        if tier != videoWant { videoWant = tier; videoWantSince = time }
+        let go = tier != videoTierShown && !videoSwitching && time - videoWantSince > 1.5 && videoTierShown >= 0
+        if go { videoSwitching = true }
+        lock.unlock()
+        if go { DispatchQueue.main.async { [self] in showVideo(tier, fade: true) } }
+    }
+
+    private func layoutVideo(_ aspect: Float) {
+        let fov = Float(cameraNode.camera?.fieldOfView ?? 60) * .pi / 180
+        let H = 2 * videoDistance * tan(fov / 2)
+        var w: Float, h: Float, y: Float = 0
+        if aspect >= videoAspect {
+            // 横に広い画面：幅に合わせて上下を切る。動画の黒い縁（下から約28%）がブースの天板の高さに来るよう上げる
+            w = H * aspect
+            h = w / videoAspect
+            let vis = H / h
+            let top = min(max(0.72 - 0.64 * vis, 0), 1 - vis)
+            y = (top + vis / 2 - 0.5) * h
+        } else {
+            h = H
+            w = H * videoAspect
+        }
+        for n in videoNodes {
+            (n.geometry as? SCNPlane)?.width = CGFloat(w)
+            (n.geometry as? SCNPlane)?.height = CGFloat(h)
+            n.position = SCNVector3(0, y, -videoDistance)
+        }
+    }
+
+    @MainActor
+    private func videoPlayer(_ tier: Int) -> AVQueuePlayer? {
+        if let p = videoPlayers[tier] { return p.player }
+        guard tier < videoURLs.count else { return nil }
+        let item = AVPlayerItem(url: videoURLs[tier])
+        let player = AVQueuePlayer()
+        player.isMuted = true
+        player.preventsDisplaySleepDuringVideoPlayback = false
+        let looper = AVPlayerLooper(player: player, templateItem: item)
+        videoPlayers[tier] = (player, looper)
+        return player
+    }
+
+    @MainActor
+    private func showVideo(_ tier: Int, fade: Bool) {
+        guard videoNodes.count == 2, let player = videoPlayer(tier) else {
+            lock.lock(); videoSwitching = false; lock.unlock()
+            return
+        }
+        let old = videoTierShown
+        player.play()
+        let back = 1 - videoTop
+        let top = videoNodes[videoTop], next = videoNodes[back]
+        let mat = next.geometry?.firstMaterial
+        videoTop = back
+        onRender {
+            mat?.diffuse.contents = player
+            next.renderingOrder = -19
+            top.renderingOrder = -20
+            next.removeAllActions()
+            if fade {
+                next.opacity = 0
+                next.runAction(.fadeIn(duration: 1.2))
+            } else {
+                next.opacity = 1
+            }
+        }
+        lock.lock(); videoTierShown = tier; lock.unlock()
+        DispatchQueue.main.asyncAfter(deadline: .now() + (fade ? 1.4 : 0.1)) { [self] in
+            if old >= 0, old != tier { videoPlayers[old]?.player.pause() }
+            let prevMat = top.geometry?.firstMaterial
+            onRender { top.opacity = 0; prevMat?.diffuse.contents = UIColor.black }
+            lock.lock(); videoSwitching = false; lock.unlock()
+        }
     }
 
     // MARK: 観客の反応 → パーティクル演出
@@ -1533,6 +1683,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         lastFrameAt = CACurrentMediaTime()
         lock.unlock()
         for job in jobs { job() }
+        if Self.videoMode { updateCrowdVideo(renderer, time: time, energy: Double(s.energy)) }
         guard isReady else { return }
         let t = Float(time.truncatingRemainder(dividingBy: 10000))
         let energy = Double(s.energy)
