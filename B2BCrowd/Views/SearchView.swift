@@ -19,6 +19,7 @@ struct SearchView: View {
     @State private var blocked: [String: AudiusBlockReason] = [:]
 
     private var isAudius: Bool { !music.demoMode && music.source == .audius }
+    private var loadKey: String { "\(music.sourceLabel)|\(source)|\(query)|\(trending.id)" }
     private let pageSize = 20
 
     var body: some View {
@@ -60,8 +61,23 @@ struct SearchView: View {
                         .foregroundStyle(isAudius ? .purple : .pink)
                 }
             }
-            .task(id: "\(source)|\(query)|\(trending.id)") { await load() }
-            .onAppear { if initialTab != 0 { source = initialTab } }
+            .task(id: loadKey) {
+                // 前回と同じ検索ならそのまま見せる（開き直しても結果が消えない）
+                if let m = SearchMemory.last, m.key == loadKey, !m.results.isEmpty {
+                    results = m.results; blocked = m.blocked; canLoadMore = m.canLoadMore; error = nil
+                    return
+                }
+                await load()
+            }
+            .onAppear {
+                if let m = SearchMemory.last, m.source == music.sourceLabel {
+                    query = m.query; source = m.tab; trending = m.trending
+                    results = m.results; blocked = m.blocked; canLoadMore = m.canLoadMore
+                } else if initialTab != 0 {
+                    source = initialTab
+                }
+            }
+            .onChange(of: results.map(\.id)) { _, _ in remember() }
         }
         .preferredColorScheme(.dark)
     }
@@ -289,6 +305,11 @@ struct SearchView: View {
         }
     }
 
+    private func remember() {
+        SearchMemory.last = SearchMemory(key: loadKey, source: music.sourceLabel, query: query, tab: source,
+                                         trending: trending, results: results, blocked: blocked, canLoadMore: canLoadMore)
+    }
+
     private func pick(_ t: Track) {
         if t.audius != nil { RecentAudiusPicks.add(t) }
         onPick(t)
@@ -312,4 +333,18 @@ enum RecentAudiusPicks {
         list.insert(a, at: 0)
         if let d = try? JSONEncoder().encode(Array(list.prefix(30))) { UserDefaults.standard.set(d, forKey: key) }
     }
+}
+
+/// 直前の検索（画面を閉じても次に開いたとき同じ結果を出す）。メタデータだけをメモリに持つ
+struct SearchMemory {
+    let key: String
+    let source: String
+    let query: String
+    let tab: Int
+    let trending: AudiusTrendingCategory
+    let results: [Track]
+    let blocked: [String: AudiusBlockReason]
+    let canLoadMore: Bool
+
+    @MainActor static var last: SearchMemory?
 }

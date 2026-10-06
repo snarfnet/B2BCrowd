@@ -50,11 +50,16 @@ struct Booth3DView: UIViewRepresentable {
         v.isUserInteractionEnabled = false
         v.preferredFramesPerSecond = 30
         club.apply(state)
+        club.startWatchdog()
         return v
     }
 
     func updateUIView(_ v: SCNView, context: Context) {
         context.coordinator.apply(state)
+    }
+
+    static func dismantleUIView(_ v: SCNView, coordinator: ClubScene) {
+        coordinator.stopWatchdog()
     }
 }
 
@@ -311,6 +316,37 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private var ledWall: SCNNode?
     private var hazes: [SCNNode] = []
     private var seenReactions = Set<UUID>()
+    /// シーンへの変更は描画スレッドでまとめて行う（メインと描画が同時に触ると実機で描画が止まることがある）
+    private var pending: [() -> Void] = []
+    private var lastFrameAt: CFTimeInterval = 0
+    private var watchdog: Timer?
+
+    private func onRender(_ f: @escaping () -> Void) {
+        lock.lock(); pending.append(f); lock.unlock()
+    }
+
+    @MainActor
+    func stopWatchdog() { watchdog?.invalidate(); watchdog = nil }
+
+    /// 描画が 2 秒以上止まったら SCNView を起こし直す
+    @MainActor
+    func startWatchdog() {
+        watchdog?.invalidate()
+        watchdog = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let v = self.view, v.window != nil,
+                      UIApplication.shared.applicationState == .active else { return }
+                self.lock.lock(); let last = self.lastFrameAt; self.lock.unlock()
+                guard last > 0, CACurrentMediaTime() - last > 2 else { return }
+                NSLog("CLUB watchdog: render stalled %.1fs, restarting", CACurrentMediaTime() - last)
+                v.scene?.isPaused = false
+                v.isPlaying = false
+                v.isPlaying = true
+                v.rendersContinuously = true
+                self.lock.lock(); self.lastFrameAt = CACurrentMediaTime(); self.lock.unlock()
+            }
+        }
+    }
     private let fxLight = SCNNode()
     private var fxFlash: Float = 0
     // VJ 卓（フロア左手前の台の上）
@@ -1186,7 +1222,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     @MainActor
     private func fireReaction(_ r: Reaction) {
         func flash(_ c: UIColor, _ amount: Float) {
-            fxLight.light?.color = c
+            let light = fxLight.light
+            onRender { light?.color = c }
             lock.lock(); fxFlash = max(fxFlash, amount); lock.unlock()
         }
         switch r {
@@ -1220,12 +1257,15 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
 
     @MainActor
     private func burst(_ ps: SCNParticleSystem, at p: SCNVector3) {
-        let n = SCNNode()
-        n.position = p
-        scene.rootNode.addChildNode(n)
-        n.addParticleSystem(ps)
-        let life = Double(ps.emissionDuration + ps.particleLifeSpan + ps.particleLifeSpanVariation) + 0.3
-        n.runAction(.sequence([.wait(duration: life), .removeFromParentNode()]))
+        let root = scene.rootNode
+        onRender {
+            let n = SCNNode()
+            n.position = p
+            root.addChildNode(n)
+            n.addParticleSystem(ps)
+            let life = Double(ps.emissionDuration + ps.particleLifeSpan + ps.particleLifeSpanVariation) + 0.3
+            n.runAction(.sequence([.wait(duration: life), .removeFromParentNode()]))
+        }
     }
 
     private static func oneShot(_ count: CGFloat, over duration: CGFloat) -> SCNParticleSystem {
@@ -1386,8 +1426,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 applyScreen(d, title: nil, mode: "STANDBY", color: .gray)
             }
             if d < playLEDs.count {
-                playLEDs[d].geometry?.firstMaterial?.emission.contents = playingHere ? UIColor.green : UIColor.black
-                playLEDs[d].geometry?.firstMaterial?.emission.intensity = playingHere ? 2 : 0
+                let m = playLEDs[d].geometry?.firstMaterial
+                onRender {
+                    m?.emission.contents = playingHere ? UIColor.green : UIColor.black
+                    m?.emission.intensity = playingHere ? 2 : 0
+                }
             }
         }
     }
@@ -1395,6 +1438,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     @MainActor
     private func updateMeters(_ e: Int) {
         let lit = Int((Double(e) / 100 * 12).rounded())
+        let meters = self.meters
+        onRender {
         for c in 0..<meters.count {
             for (i, led) in meters[c].enumerated() {
                 let color: UIColor = i < 7 ? .green : i < 10 ? .yellow : .red
@@ -1402,6 +1447,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 m?.emission.contents = i < lit ? color : UIColor.black
                 m?.emission.intensity = i < lit ? 2.5 : 0
             }
+        }
         }
     }
 
@@ -1482,7 +1528,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let s = st
         let tg = targets, gs = gestures, fg = faderGoal, xg = xGoal
         let crowd = people, rigs = arms, isReady = ready
+        let jobs = pending
+        pending.removeAll()
+        lastFrameAt = CACurrentMediaTime()
         lock.unlock()
+        for job in jobs { job() }
         guard isReady else { return }
         let t = Float(time.truncatingRemainder(dividingBy: 10000))
         let energy = Double(s.energy)
@@ -1801,11 +1851,14 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let art = art(for: t) ?? vinyl(nil)
         let (a, b) = Self.palette(art)
         let text = Self.typoImage("\(t.title.uppercased())  —  \(t.artist.uppercased())  ·  ")
-        for m in vjMaterials {
-            m.setValue(SCNMaterialProperty(contents: art), forKey: "vjArt")
-            m.setValue(SCNMaterialProperty(contents: text), forKey: "vjText")
-            m.setValue(NSValue(scnVector3: a), forKey: "vjColA")
-            m.setValue(NSValue(scnVector3: b), forKey: "vjColB")
+        let mats = vjMaterials
+        onRender {
+            for m in mats {
+                m.setValue(SCNMaterialProperty(contents: art), forKey: "vjArt")
+                m.setValue(SCNMaterialProperty(contents: text), forKey: "vjText")
+                m.setValue(NSValue(scnVector3: a), forKey: "vjColA")
+                m.setValue(NSValue(scnVector3: b), forKey: "vjColB")
+            }
         }
     }
 
@@ -1858,9 +1911,11 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     private func applyPlatter(_ d: Int, _ img: UIImage) {
         guard d < platters.count else { return }
         let m = platters[d].geometry?.firstMaterial
-        m?.diffuse.contents = img
-        m?.lightingModel = .physicallyBased
-        m?.roughness.contents = 0.35
+        onRender {
+            m?.diffuse.contents = img
+            m?.lightingModel = .physicallyBased
+            m?.roughness.contents = 0.35
+        }
     }
 
     private func applyScreen(_ d: Int, title: String?, mode: String, color: UIColor) {
@@ -1876,8 +1931,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
                 .draw(with: CGRect(x: 18, y: 76, width: w - 36, height: 130), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
         }
         let m = screens[d].geometry?.firstMaterial
-        m?.emission.contents = img
-        m?.emission.intensity = 0.8
+        onRender {
+            m?.emission.contents = img
+            m?.emission.intensity = 0.8
+        }
     }
 
     @MainActor
