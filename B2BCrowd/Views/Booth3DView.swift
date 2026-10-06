@@ -1416,6 +1416,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     @MainActor
     private func updateDJVideo(_ s: BoothState) {
         guard characters.count == 2 else { return }
+        // タイトル画面は観客だけ（縦長の画面に DJ の背中が大きく出すぎるため）
+        if s.currentID == "title" { return }
         let who: Int, clip: String
         switch s.phase {
         case .transition: who = s.selector; clip = "drop"
@@ -1554,9 +1556,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         ps.acceleration = SCNVector3(0, 1.5, 0)
         ps.particleSize = 0.2
         ps.emitterShape = SCNSphere(radius: 0.06)
-        fade(ps, [UIColor(red: 1, green: 0.95, blue: 0.75, alpha: 1), UIColor(red: 1, green: 0.55, blue: 0.12, alpha: 0.9),
-                  UIColor(red: 0.8, green: 0.15, blue: 0.03, alpha: 0.5), UIColor(red: 0.2, green: 0.02, blue: 0, alpha: 0)],
-             sizes: [0.12, 0.3, 0.5, 0.7])
+        // 赤黒い尾が実写の上で濁らないよう、後半は早めに消す
+        fade(ps, [UIColor(red: 1, green: 0.95, blue: 0.75, alpha: 1), UIColor(red: 1, green: 0.6, blue: 0.15, alpha: 0.85),
+                  UIColor(red: 0.9, green: 0.25, blue: 0.05, alpha: 0.25), UIColor(red: 0.3, green: 0.05, blue: 0, alpha: 0)],
+             sizes: [0.12, 0.28, 0.42, 0.5])
         return ps
     }
 
