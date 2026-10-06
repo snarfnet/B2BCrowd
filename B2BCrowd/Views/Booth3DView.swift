@@ -40,7 +40,11 @@ struct Booth3DView: UIViewRepresentable {
         let club = context.coordinator
         club.view = v
         club.videoHost = box
-        box.bandTop = state.venue == .forestRave ? 0.70 : state.venue == .recordShop ? 0.68 : 0.72
+        box.bandTop = state.venue == .forestRave ? 0.70 : state.venue == .recordShop ? 0.68 : 0.70
+        if let u = ClubScene.crowdVideoURLs(for: state.venue).first, let a = ClubContainerView.aspect(of: u) { box.crowdAspect = a }
+        box.djMode = club.djVideoMode
+        if club.djVideoMode, let u = ClubScene.djVideoURL(state.characters.first ?? "c09", "play"),
+           let a = ClubContainerView.aspect(of: u) { box.djAspect = a }
         // シェーダーの準備を裏で済ませてから表示（起動直後に固まらないように）
         v.prepare([club.scene]) { _ in
             DispatchQueue.main.async { v.scene = club.scene }
@@ -74,20 +78,26 @@ struct Booth3DView: UIViewRepresentable {
 // 動画は SceneKit に渡さず Core Animation のレイヤーで出す（描画スレッドと取り合わない）。
 final class ClubContainerView: UIView {
     let sceneView = SCNView(frame: .zero)
+    /// 観客（奥）と DJ（手前・透明つき）。それぞれ2枚を重ねてクロスフェードする
     let videoLayers = [AVPlayerLayer(), AVPlayerLayer()]
-    static let videoAspect: CGFloat = 704.0 / 1280.0
-    /// 動画の中でブースの黒い縁が始まる高さ（上から。会場ごとに少し違う）
+    let djLayers = [AVPlayerLayer(), AVPlayerLayer()]
+    var crowdAspect: CGFloat = 704.0 / 1280.0 { didSet { setNeedsLayout() } }
+    var djAspect: CGFloat = 704.0 / 890.0 { didSet { setNeedsLayout() } }
+    /// DJ も動画のとき true（観客と DJ を同じ大きさで下揃えに重ねる）
+    var djMode = false { didSet { setNeedsLayout() } }
+    /// 観客の動画の中でブースの黒い縁が始まる高さ（上から。DJ が 3D のときに使う）
     var bandTop: CGFloat = 0.72 { didSet { setNeedsLayout() } }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .black
         clipsToBounds = true
-        for l in videoLayers {
+        for l in videoLayers + djLayers {
             l.videoGravity = .resizeAspectFill
             l.opacity = 0
             layer.addSublayer(l)
         }
+        for l in djLayers { l.pixelBufferAttributes = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA] }
         sceneView.frame = bounds
         sceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         addSubview(sceneView)
@@ -95,24 +105,44 @@ final class ClubContainerView: UIView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    /// 幅に合わせて下揃え（縦長の画面では高さに合わせて中央）
+    private func bottomFit(_ aspect: CGFloat, _ W: CGFloat, _ H: CGFloat) -> CGRect {
+        if W / H >= aspect {
+            let h = W / aspect
+            return CGRect(x: 0, y: H - h, width: W, height: h)
+        }
+        let w = H * aspect
+        return CGRect(x: (W - w) / 2, y: 0, width: w, height: H)
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         let W = bounds.width, H = bounds.height
         guard W > 0, H > 0 else { return }
-        var f: CGRect
-        if W / H >= Self.videoAspect {
-            // 横に広い画面：幅に合わせ、動画の黒い縁（上から約72%）がブースの天板（画面の約64%）に来るよう上下を決める
-            let h = W / Self.videoAspect
+        var crowd: CGRect
+        if djMode {
+            crowd = bottomFit(crowdAspect, W, H)
+        } else if W / H >= crowdAspect {
+            // 3D のブースのとき：動画の黒い縁がブースの天板（画面の約64%）に来るよう上下を決める
+            let h = W / crowdAspect
             let top = min(0, max(H - h, 0.64 * H - bandTop * h))
-            f = CGRect(x: 0, y: top, width: W, height: h)
+            crowd = CGRect(x: 0, y: top, width: W, height: h)
         } else {
-            let w = H * Self.videoAspect
-            f = CGRect(x: (W - w) / 2, y: 0, width: w, height: H)
+            let w = H * crowdAspect
+            crowd = CGRect(x: (W - w) / 2, y: 0, width: w, height: H)
         }
+        let dj = bottomFit(djAspect, W, H)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        for l in videoLayers { l.frame = f }
+        for l in videoLayers { l.frame = crowd }
+        for l in djLayers { l.frame = dj }
         CATransaction.commit()
+    }
+
+    static func aspect(of url: URL) -> CGFloat? {
+        guard let t = AVURLAsset(url: url).tracks(withMediaType: .video).first else { return nil }
+        let sz = t.naturalSize.applying(t.preferredTransform)
+        return abs(sz.height) > 0 ? abs(sz.width / sz.height) : nil
     }
 }
 
@@ -415,6 +445,20 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     static let videoMode = crowdVideoURLs(for: .smallClub).count == 6 && !ProcessInfo.processInfo.arguments.contains("-crowd3d")
     private lazy var videoURLs = Self.crowdVideoURLs(for: venue)
     weak var videoHost: ClubContainerView?
+
+    // MARK: DJ の実写動画（緑背景を抜いた透明つき HEVC）
+    static func djKey(_ id: String) -> String {
+        DJCharacter.named(id).name.lowercased().filter { $0.isLetter || $0.isNumber }
+    }
+    static func djVideoURL(_ id: String, _ clip: String) -> URL? {
+        Bundle.main.url(forResource: "dj_\(djKey(id))_\(clip)", withExtension: "mov")
+    }
+    /// 2人とも動画があるときだけ DJ を動画にする（無ければ 3D のブースと DJ）
+    lazy var djVideoMode: Bool = Self.videoMode && !ProcessInfo.processInfo.arguments.contains("-dj3d")
+        && characters.allSatisfy { id in ["play", "browse", "drop"].allSatisfy { Self.djVideoURL(id, $0) != nil } }
+    private var djPlayers: [String: (player: AVQueuePlayer, looper: AVPlayerLooper?)] = [:]
+    private var djShown = ""
+    private var djTop = 0
     private var videoTop = 0
     private var videoTierShown = -1
     private var videoWant = -1
@@ -514,6 +558,10 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
             let attach = { [self] in
                 scene.rootNode.addChildNode(gear)
                 scene.rootNode.addChildNode(root)
+                if djVideoMode {
+                    gear.isHidden = true
+                    for p in djs { p.root.isHidden = true }
+                }
                 lock.lock()
                 people = crowd + djs
                 arms = rigs
@@ -1362,6 +1410,56 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
     }
 
+    // MARK: DJ の実写動画
+
+    /// 回している DJ だけを映す：選曲中は browse、プレイ中は play、切り替えの瞬間は次の DJ の drop
+    @MainActor
+    private func updateDJVideo(_ s: BoothState) {
+        guard characters.count == 2 else { return }
+        let who: Int, clip: String
+        switch s.phase {
+        case .transition: who = s.selector; clip = "drop"
+        case .playing, .countdown: who = s.current == nil ? s.selector : s.owner; clip = s.current == nil ? "browse" : "play"
+        case .paused: return
+        default: who = s.selector; clip = "browse"
+        }
+        let id = characters[who]
+        let key = "\(id)_\(clip)"
+        guard key != djShown, let host = videoHost, let url = Self.djVideoURL(id, clip) else { return }
+        djShown = key
+        let player: AVQueuePlayer
+        if let p = djPlayers[key] {
+            player = p.player
+        } else {
+            let item = AVPlayerItem(url: url)
+            let q = AVQueuePlayer()
+            q.isMuted = true
+            // 交代の一回きり（drop）はくり返さず最後の絵で止める
+            let looper = clip == "drop" ? nil : AVPlayerLooper(player: q, templateItem: item)
+            if clip == "drop" { q.insert(item, after: nil); q.actionAtItemEnd = .pause }
+            djPlayers[key] = (q, looper)
+            player = q
+        }
+        if clip == "drop" { player.seek(to: .zero) }
+        player.play()
+        let back = 1 - djTop
+        let top = host.djLayers[djTop], next = host.djLayers[back]
+        djTop = back
+        next.player = player
+        host.layer.insertSublayer(next, above: top)
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.35)
+        next.opacity = 1
+        CATransaction.commit()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            top.opacity = 0
+            if top.player !== player { top.player?.pause(); top.player = nil }
+            CATransaction.commit()
+        }
+    }
+
     // MARK: 観客の反応 → パーティクル演出
 
     private static let puffImg = puffImage()
@@ -1552,6 +1650,7 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         }
         if prev?.currentID != s.currentID || prev?.vjMode != s.vjMode { updateVJTrack(s) }
         if prev?.energy != s.energy { updateMeters(s.energy) }
+        if djVideoMode { updateDJVideo(s) }
         for r in s.reactions where !seenReactions.contains(r.id) {
             seenReactions.insert(r.id)
             if let kind = Reaction(rawValue: r.text) { fireReaction(kind) }

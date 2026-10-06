@@ -1,0 +1,36 @@
+name: DJ alpha video
+
+# ArtSource/djvideo/*_play|browse|drop.mp4（緑背景）→ 緑を抜いた透明つき HEVC（.mov）。
+# 手動実行し、artifact「djalpha」を B2BCrowd/Resources/DJVideo に入れる。
+on:
+  workflow_dispatch:
+
+jobs:
+  convert:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install ffmpeg
+      run: brew install ffmpeg
+    - name: Key and encode
+      run: |
+        set -e
+        mkdir -p out tmp
+        for f in ArtSource/djvideo/*_play.mp4 ArtSource/djvideo/*_browse.mp4 ArtSource/djvideo/*_drop.mp4; do
+          [ -f "$f" ] || continue
+          n=$(basename "$f" .mp4)
+          KEY="scale=704:890,fps=24,format=rgba,chromakey=0x00FF00:0.16:0.05,despill=type=green"
+          if [[ "$n" == *_drop ]]; then
+            # 交代の一回きり：そのまま前向き
+            ffmpeg -v error -y -i "$f" -vf "$KEY" -an -c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le "tmp/$n.mov"
+          else
+            # くり返し：前→逆でつないで継ぎ目なし
+            ffmpeg -v error -y -i "$f" -filter_complex "[0:v]$KEY,split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1:a=0[v]" -map "[v]" -an -c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le "tmp/$n.mov"
+          fi
+          swift tools/hevc_alpha.swift "tmp/$n.mov" "out/dj_$n.mov"
+        done
+        ls -la out
+    - uses: actions/upload-artifact@v4
+      with:
+        name: djalpha
+        path: out/
