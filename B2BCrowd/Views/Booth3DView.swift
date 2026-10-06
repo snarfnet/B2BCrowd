@@ -450,12 +450,16 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
     static func djKey(_ id: String) -> String {
         DJCharacter.named(id).name.lowercased().filter { $0.isLetter || $0.isNumber }
     }
+    /// その場面の動画が無ければ、同じ DJ の別の動画で代用する（プレイ中 → 選曲中 → 交代の順）
     static func djVideoURL(_ id: String, _ clip: String) -> URL? {
-        Bundle.main.url(forResource: "dj_\(djKey(id))_\(clip)", withExtension: "mov")
+        for c in [clip, "play", "browse", "drop"] {
+            if let u = Bundle.main.url(forResource: "dj_\(djKey(id))_\(c)", withExtension: "mov") { return u }
+        }
+        return nil
     }
     /// 2人とも動画があるときだけ DJ を動画にする（無ければ 3D のブースと DJ）
     lazy var djVideoMode: Bool = Self.videoMode && !ProcessInfo.processInfo.arguments.contains("-dj3d")
-        && characters.allSatisfy { id in ["play", "browse", "drop"].allSatisfy { Self.djVideoURL(id, $0) != nil } }
+        && characters.allSatisfy { Self.djVideoURL($0, "play") != nil }
     private var djPlayers: [String: (player: AVQueuePlayer, looper: AVPlayerLooper?)] = [:]
     private var djShown = ""
     private var djTop = 0
@@ -1528,7 +1532,8 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         ps.emissionDuration = duration
         ps.birthRate = count / duration
         ps.isLightingEnabled = false
-        ps.blendMode = .additive
+        // 透明な 3D を動画に重ねるときは加算だと暗い塊になるので、普通の重ね方にする
+        ps.blendMode = videoMode ? .alpha : .additive
         ps.emittingDirection = SCNVector3(0, 1, 0)
         return ps
     }
