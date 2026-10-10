@@ -71,6 +71,7 @@ struct LobbyView: View {
                     }
                     .buttonStyle(NeonButtonStyle(color: .cyan, filled: false))
                 }
+                LinkHowTo()
             case .host:
                 HStack(spacing: 10) {
                     if hostConnected {
@@ -104,9 +105,7 @@ struct LobbyView: View {
                         guestStatus
                         if let e = link.lastError { Text(e).font(.caption).foregroundStyle(.orange) }
                     }
-                    Text(L.t("曲はこの iPhone で探して送ります。ホストが Apple Music のときは、この iPhone でも Apple Music の許可が必要です。",
-                             "You search on this iPhone. If the host uses Apple Music, allow Apple Music on this iPhone too."))
-                        .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    LinkHowTo()
                     MusicStatusCard()
                 }
                 .padding(.horizontal)
@@ -447,6 +446,47 @@ struct LobbyView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(.system(size: 12, weight: .heavy, design: .monospaced)).foregroundStyle(.white.opacity(0.55))
             content()
+        }
+    }
+}
+
+// 2台対戦の遊び方。開くと手順と注意が出る
+struct LinkHowTo: View {
+    @State private var open = false
+
+    private var items: [(String, String)] {
+        [
+            ("iphone.gen3", L.t("2台ともこのアプリを入れてください。", "Both iPhones need this app installed.")),
+            ("hand.tap", L.t("1台目は「HOST」、2台目は「JOIN」を押して、出てきた相手の名前をタップするとつながります。", "Tap HOST on one iPhone and JOIN on the other, then tap the host's name.")),
+            ("antenna.radiowaves.left.and.right", L.t("近くにいるときだけ使えます。Wi‑Fi か Bluetooth をオンに。初めてのときに出る「ローカルネットワーク」の確認は「許可」を押してください。", "Works only nearby. Turn on Wi‑Fi or Bluetooth, and tap Allow when asked about the local network.")),
+            ("speaker.wave.2", L.t("音はホストの iPhone からだけ鳴ります。会場・観客・DJ の画面は2台とも同じものが映ります。", "Music plays only from the host. Both iPhones show the same venue, crowd and DJs.")),
+            ("music.note", L.t("ホストが Apple Music のときは、JOIN 側の iPhone でも曲を探すために Apple Music の許可が必要です。AUDIUS か DEMO なら Apple Music は無くても遊べます。", "If the host uses Apple Music, the JOIN side also needs Apple Music access to search. With AUDIUS or DEMO, no Apple Music is needed.")),
+            ("exclamationmark.triangle", L.t("ホスト側の Apple Music に無い曲は流せません。そのときは選び直しになります。", "Tracks missing from the host's Apple Music can't play; pick another.")),
+        ]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { open.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "questionmark.circle")
+                    Text(L.t("2台で遊ぶには", "How to play on 2 iPhones")).font(.system(size: 13, weight: .bold))
+                    Image(systemName: open ? "chevron.up" : "chevron.down").font(.caption)
+                }
+                .foregroundStyle(.cyan)
+            }
+            .buttonStyle(.plain)
+            if open {
+                ForEach(items, id: \.1) { icon, text in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: icon).frame(width: 20).foregroundStyle(.white.opacity(0.7))
+                        Text(text).font(.caption).foregroundStyle(.white.opacity(0.8))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
         }
     }
 }
