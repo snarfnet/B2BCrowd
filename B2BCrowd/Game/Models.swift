@@ -14,6 +14,8 @@ enum TrackSource {
     case appleMusic(Song)
     case audius(AudiusTrack)
     case demo(hue: Double)
+    /// 2台対戦で相手の iPhone から届いた Apple Music の曲（id だけ。鳴らす側でカタログから引き直す）
+    case appleMusicRef
 }
 
 // 選曲に使う音楽サービス。ゲーム側は Track と TrackPlayer だけを見るので、ここを増やせば別サービスも足せる。
@@ -49,7 +51,7 @@ struct Track: Identifiable, Equatable {
 
     var sourceKind: MusicSourceKind? {
         switch source {
-        case .appleMusic: return .appleMusic
+        case .appleMusic, .appleMusicRef: return .appleMusic
         case .audius: return .audius
         case .demo: return nil
         }
@@ -102,6 +104,52 @@ extension Track {
             artworkURL: (a.artwork?.medium).flatMap(URL.init(string:)),
             source: .audius(a)
         )
+    }
+}
+
+// 2台対戦で送る形。Apple Music の Song は送れないので id と表示用の情報だけ。
+extension Track: Codable {
+    private enum K: String, CodingKey { case id, title, artist, album, genres, year, duration, art, kind, audius, hue }
+
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        let src: TrackSource
+        switch try c.decode(String.self, forKey: .kind) {
+        case "audius": src = .audius(try c.decode(AudiusTrack.self, forKey: .audius))
+        case "demo": src = .demo(hue: try c.decode(Double.self, forKey: .hue))
+        default: src = .appleMusicRef
+        }
+        self.init(id: try c.decode(String.self, forKey: .id),
+                  title: try c.decode(String.self, forKey: .title),
+                  artist: try c.decode(String.self, forKey: .artist),
+                  album: try c.decode(String.self, forKey: .album),
+                  genres: try c.decode([String].self, forKey: .genres),
+                  releaseYear: try c.decodeIfPresent(Int.self, forKey: .year),
+                  duration: try c.decodeIfPresent(TimeInterval.self, forKey: .duration),
+                  artworkURL: try c.decodeIfPresent(URL.self, forKey: .art),
+                  source: src)
+    }
+
+    func encode(to e: Encoder) throws {
+        var c = e.container(keyedBy: K.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(artist, forKey: .artist)
+        try c.encode(album, forKey: .album)
+        try c.encode(genres, forKey: .genres)
+        try c.encodeIfPresent(releaseYear, forKey: .year)
+        try c.encodeIfPresent(duration, forKey: .duration)
+        try c.encodeIfPresent(artworkURL, forKey: .art)
+        switch source {
+        case .audius(let a):
+            try c.encode("audius", forKey: .kind)
+            try c.encode(a, forKey: .audius)
+        case .demo(let h):
+            try c.encode("demo", forKey: .kind)
+            try c.encode(h, forKey: .hue)
+        case .appleMusic, .appleMusicRef:
+            try c.encode("appleMusic", forKey: .kind)
+        }
     }
 }
 
@@ -370,7 +418,7 @@ enum ScoreKind: Int, CaseIterable { case selection, flow, speed, crowd
     }
 }
 
-struct ScoreCard {
+struct ScoreCard: Codable {
     var parts: [Int] = [0, 0, 0, 0]
     var total: Int { parts.reduce(0, +) }
     subscript(_ k: ScoreKind) -> Int {
@@ -379,8 +427,8 @@ struct ScoreCard {
     }
 }
 
-struct RoundRecord: Identifiable {
-    let id = UUID()
+struct RoundRecord: Identifiable, Codable {
+    var id = UUID()
     let number: Int
     let dj: Int
     let track: Track
@@ -389,11 +437,11 @@ struct RoundRecord: Identifiable {
     var gained: Double { energyEnd - energyStart }
 }
 
-struct FloatEvent: Identifiable {
-    let id = UUID()
+struct FloatEvent: Identifiable, Codable {
+    var id = UUID()
     let text: String
     let value: Int
-    let born = Date()
+    var born = Date()
 }
 
 enum Reaction: String, CaseIterable, Identifiable {
@@ -410,7 +458,7 @@ enum Reaction: String, CaseIterable, Identifiable {
     }
 }
 
-enum FinishReason {
+enum FinishReason: String, Codable {
     case complete, floorEmpty, legendary, quit
     var headline: String {
         switch self {

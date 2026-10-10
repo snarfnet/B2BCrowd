@@ -78,6 +78,8 @@ struct Booth3DView: UIViewRepresentable {
 // 動画は SceneKit に渡さず Core Animation のレイヤーで出す（描画スレッドと取り合わない）。
 final class ClubContainerView: UIView {
     let sceneView = SCNView(frame: .zero)
+    /// DJ の動画は 3D（紙吹雪・炎などのパーティクル）よりさらに手前に出す。パーティクルは DJ の背中の向こう側
+    private let djHost = UIView(frame: .zero)
     /// 観客（奥）と DJ（手前・透明つき）。それぞれ2枚を重ねてクロスフェードする
     let videoLayers = [AVPlayerLayer(), AVPlayerLayer()]
     let djLayers = [AVPlayerLayer(), AVPlayerLayer()]
@@ -95,12 +97,18 @@ final class ClubContainerView: UIView {
         for l in videoLayers + djLayers {
             l.videoGravity = .resizeAspectFill
             l.opacity = 0
-            layer.addSublayer(l)
         }
+        for l in videoLayers { layer.addSublayer(l) }
+        for l in djLayers { djHost.layer.addSublayer(l) }
         for l in djLayers { l.pixelBufferAttributes = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA] }
         sceneView.frame = bounds
         sceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         addSubview(sceneView)
+        djHost.frame = bounds
+        djHost.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        djHost.isUserInteractionEnabled = false
+        djHost.backgroundColor = .clear
+        addSubview(djHost)
     }
 
     required init?(coder: NSCoder) { fatalError() }

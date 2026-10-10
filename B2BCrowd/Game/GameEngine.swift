@@ -7,7 +7,7 @@ import SwiftUI
 @MainActor
 @Observable
 final class GameEngine {
-    enum Phase: Equatable {
+    enum Phase: String, Equatable, Codable {
         case searchingTrack      // 1曲目をまだ選んでいない
         case playing
         case countdown           // 終わり10秒
@@ -17,7 +17,7 @@ final class GameEngine {
         case result
     }
 
-    enum Banner: Equatable {
+    enum Banner: Equatable, Codable {
         case combo(Int)
         case legendary
         case floorEmpty
@@ -62,10 +62,27 @@ final class GameEngine {
     private var legendaryArmed = true
     private var bannerTask: Task<Void, Never>?
 
-    init(config: SessionConfig, player: TrackPlayer) {
+    // 2台対戦
+    /// この iPhone で操作する DJ（nil = 1台を2人で回す）
+    var localDJ: Int?
+    /// 相手の iPhone で進むゲームを写すだけ（音も相手側で鳴る）
+    let isMirror: Bool
+    /// 写す側：操作を相手へ送る
+    var sendCommand: ((LinkCommand) -> Void)?
+    /// 鳴らす側：状態が変わるたびに相手へ送る
+    var onTick: (() -> Void)?
+    private var lastAutoPick: Date = .distantPast
+
+    init(config: SessionConfig, player: TrackPlayer, mirror: Bool = false) {
         self.config = config
         self.player = player
+        self.isMirror = mirror
     }
+
+    /// この iPhone の人が次の曲を選べるか
+    var canPickHere: Bool { localDJ == nil || selector == localDJ }
+    /// LIKE・お題の判定は、いま流れている曲の相手 DJ がする
+    var canJudgeHere: Bool { localDJ == nil || currentOwner != localDJ }
 
     // MARK: 表示用
 
@@ -101,6 +118,7 @@ final class GameEngine {
     // MARK: 選曲
 
     func reserve(_ t: Track) {
+        if isMirror { sendCommand?(.pick(t)); return }
         next = t
         selectedAt = selectionElapsed
         MusicAnalytics.shared.recordSelection(seconds: selectionElapsed, source: t.sourceKind)
@@ -115,12 +133,14 @@ final class GameEngine {
     }
 
     func clearNext() {
+        if isMirror { sendCommand?(.clearNext); return }
         guard phase != .transition else { return }
         next = nil
         selectedAt = nil
     }
 
     func pass() {
+        if isMirror { sendCommand?(.pass); return }
         guard next == nil, phase != .transition, phase != .result else { return }
         add(-5, dj: selector, kind: .selection, label: "PASS")
         selector = 1 - selector
@@ -131,6 +151,7 @@ final class GameEngine {
     // MARK: 観客・相手DJ
 
     func like() {
+        if isMirror { sendCommand?(.like); return }
         guard !likedThisRound, current != nil, phase == .playing || phase == .countdown else { return }
         likedThisRound = true
         add(3, dj: currentOwner, kind: .flow, label: "LIKE ♥ \(name(1 - currentOwner))")
@@ -138,6 +159,7 @@ final class GameEngine {
     }
 
     func judge(_ ok: Bool) {
+        if isMirror { sendCommand?(.judge(ok)); return }
         guard needsJudge else { return }
         judgedThisRound = true
         let tag = config.mode == .shiritori ? L.t("繋がった", "LINKED") : L.t("テーマ一致", "THEME MATCH")
@@ -151,6 +173,7 @@ final class GameEngine {
     }
 
     func react(_ r: Reaction) {
+        if isMirror { sendCommand?(.react(r.rawValue)); return }
         guard current != nil, phase == .playing || phase == .countdown else { return }
         reactions.append(FloatEvent(text: r.rawValue, value: 0))
         trimFeeds()
@@ -173,6 +196,7 @@ final class GameEngine {
     // MARK: 一時停止
 
     func pause() {
+        if isMirror { sendCommand?(.pause); return }
         guard phase != .paused, phase != .result, phase != .transition else { return }
         resumePhase = phase
         phase = .paused
@@ -180,6 +204,7 @@ final class GameEngine {
     }
 
     func resume() async {
+        if isMirror { sendCommand?(.resume); return }
         guard phase == .paused else { return }
         if resumePhase == .playing || resumePhase == .countdown {
             await player.resume()
@@ -189,6 +214,71 @@ final class GameEngine {
 
     func quit() { finish(.quit) }
 
+    // MARK: 2台対戦
+
+    /// 相手の iPhone から届いた操作。順番や立場が合わないものは無視する
+    func handle(_ c: LinkCommand, from dj: Int) {
+        switch c {
+        case .pick(let t): if selector == dj { reserve(t) }
+        case .clearNext: if selector == dj { clearNext() }
+        case .pass: if selector == dj { pass() }
+        case .like: if currentOwner != dj { like() }
+        case .judge(let ok): if currentOwner != dj { judge(ok) }
+        case .react(let r): if let r = Reaction(rawValue: r) { react(r) }
+        case .pause: pause()
+        case .resume: Task { await resume() }
+        }
+        onTick?()
+    }
+
+    func snapshot() -> LinkSnapshot {
+        LinkSnapshot(phase: phase, energy: energy, peakEnergy: peakEnergy, combo: combo, maxCombo: maxCombo,
+                     scores: scores, rounds: rounds, current: current, currentOwner: currentOwner, next: next,
+                     selector: selector, selectionElapsed: selectionElapsed, trackElapsed: trackElapsed,
+                     events: events, reactions: reactions, banner: banner, finishReason: finishReason,
+                     likedThisRound: likedThisRound, judgedThisRound: judgedThisRound, playedIDs: Array(playedIDs))
+    }
+
+    func apply(_ s: LinkSnapshot) {
+        guard isMirror, phase != .result else { return }
+        if s.phase == .transition, phase != .transition { SoundFX.shared.play(.drop) }
+        energy = s.energy; peakEnergy = s.peakEnergy
+        combo = s.combo; maxCombo = s.maxCombo
+        scores = s.scores
+        if rounds.count != s.rounds.count || rounds.last?.energyEnd != s.rounds.last?.energyEnd { rounds = s.rounds }
+        if current?.id != s.current?.id { current = s.current }
+        if next?.id != s.next?.id { next = s.next }
+        currentOwner = s.currentOwner; selector = s.selector
+        selectionElapsed = s.selectionElapsed; trackElapsed = s.trackElapsed
+        if events.map(\.id) != s.events.map(\.id) { events = s.events }
+        if reactions.map(\.id) != s.reactions.map(\.id) { reactions = s.reactions }
+        banner = s.banner
+        finishReason = s.finishReason
+        likedThisRound = s.likedThisRound; judgedThisRound = s.judgedThisRound
+        playedIDs = Set(s.playedIDs)
+        phase = s.phase
+    }
+
+    /// 相手との接続が切れた
+    func partnerLeft() {
+        if isMirror {
+            finish(.quit)
+        } else {
+            localDJ = nil
+            flash(.notice(L.t("相手の接続が切れました。この iPhone で続けます", "Partner disconnected. Carry on with this iPhone.")), seconds: 4)
+        }
+    }
+
+    func notice(_ text: String) { flash(.notice(text), seconds: 3) }
+
+    private func mirrorAutopilot() {
+        guard autopilot, canPickHere, next == nil, Date().timeIntervalSince(lastAutoPick) > 3,
+              phase == .searchingTrack || phase == .waitingForNextDJ || (phase == .playing && selectionElapsed > 4) else { return }
+        lastAutoPick = Date()
+        if let t = DemoCatalog.tracks.filter({ !playedIDs.contains($0.id) }).randomElement() { reserve(t) }
+        if Int.random(in: 0..<2) == 0 { react(.fire) }
+    }
+
     // MARK: 進行
 
     /// 動作確認・スクショ用。デモ曲を自動で選び、観客も自動で反応する。
@@ -197,18 +287,24 @@ final class GameEngine {
     var autopilotPool: [Track] = []
 
     private func autopilotStep() {
-        if next == nil, phase != .transition, phase != .paused, phase != .result,
+        if next == nil, canPickHere, phase != .transition, phase != .paused, phase != .result,
            phase == .searchingTrack || phase == .waitingForNextDJ || selectionElapsed > 4 {
             let pool = autopilotPool.isEmpty ? DemoCatalog.tracks : autopilotPool
             if let t = pool.filter({ !playedIDs.contains($0.id) && !failedIDs.contains($0.id) }).randomElement() { reserve(t) }
         }
         guard phase == .playing || phase == .countdown else { return }
         if Int.random(in: 0..<5) == 0 { react([Reaction.fire, .heart, .clap].randomElement()!) }
-        if needsJudge, trackElapsed > 3 { judge(true) }
-        if !likedThisRound, trackElapsed > 5 { like() }
+        if needsJudge, canJudgeHere, trackElapsed > 3 { judge(true) }
+        if !likedThisRound, canJudgeHere, trackElapsed > 5 { like() }
     }
 
     func tick(_ dt: TimeInterval) {
+        if isMirror {
+            // 音（曲・歓声）は鳴らす側の iPhone だけ
+            mirrorAutopilot()
+            return
+        }
+        defer { onTick?() }
         if autopilot { autopilotStep() }
         SoundFX.shared.updateCrowd(energy: energy, active: phase != .paused && phase != .result)
         switch phase {
@@ -332,7 +428,7 @@ final class GameEngine {
             selectionElapsed = 0
             timedOut = true
             phase = .waitingForNextDJ
-            let reason = (error as? AudiusError)?.errorDescription
+            let reason = (error as? AudiusError)?.errorDescription ?? (error as? LinkError)?.errorDescription
             flash(.notice(reason ?? L.t("この曲は再生できません。選び直してください", "This track can't play. Pick another.")), seconds: 3.5)
             return
         }
@@ -471,6 +567,7 @@ final class GameEngine {
         SoundFX.shared.stopCrowd()
         finishReason = reason
         phase = .result
+        onTick?()
     }
 
     // MARK: リザルト

@@ -8,15 +8,27 @@ struct SessionView: View {
     @State private var showSearch = false
     @State private var showHandoff = false
     @State private var confirmQuit = false
+    @State private var isSplit = false
 
     var body: some View {
-        VStack(spacing: 10) {
-            topBar
-            EnergyMeter(energy: game.energy).padding(.horizontal)
-            floor
-            nowPlaying
-            nextPanel
-            interactions
+        GeometryReader { geo in
+            Group {
+            if useSplit(geo.size) {
+                splitLayout(geo.size)
+            } else {
+                VStack(spacing: 10) {
+                    topBar
+                    EnergyMeter(energy: game.energy).padding(.horizontal)
+                    floor
+                    nowPlaying
+                    nextPanel
+                    interactions
+                }
+            }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .onAppear { isSplit = useSplit(geo.size) }
+            .onChange(of: geo.size) { _, s in isSplit = useSplit(s) }
         }
         .padding(.bottom, 8)
         .foregroundStyle(.white)
@@ -45,6 +57,33 @@ struct SessionView: View {
         }
         .confirmationDialog(L.t("セッションを終了しますか？", "End this session?"), isPresented: $confirmQuit, titleVisibility: .visible) {
             Button(L.t("終了してリザルトへ", "End and see results"), role: .destructive) { game.quit() }
+        }
+    }
+
+    // MARK: 左右分割（iPhone Duo を開いたとき）
+
+    private func useSplit(_ size: CGSize) -> Bool {
+        guard game.localDJ == nil, !game.isMirror else { return false }
+        switch app.splitMode {
+        case .on: return true
+        case .off: return false
+        case .auto: return size.width >= 560
+        }
+    }
+
+    private func splitLayout(_ size: CGSize) -> some View {
+        VStack(spacing: 8) {
+            topBar
+            EnergyMeter(energy: game.energy).padding(.horizontal)
+            floorView(height: size.height * 0.34)
+            nowPlaying
+            HStack(spacing: 0) {
+                SplitColumn(game: game, dj: 0)
+                // 真ん中（Duo の折り目）
+                Rectangle().fill(Color.white.opacity(0.12)).frame(width: 2)
+                SplitColumn(game: game, dj: 1)
+            }
+            .frame(maxHeight: .infinity)
         }
     }
 
@@ -86,6 +125,16 @@ struct SessionView: View {
             .frame(maxWidth: .infinity)
             .frame(minHeight: 300, maxHeight: 420)
             .layoutPriority(1)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(alignment: .topTrailing) { eventFeed }
+            .overlay { bannerView }
+            .padding(.horizontal)
+    }
+
+    private func floorView(height: CGFloat) -> some View {
+        Booth3DView(state: boothState)
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(alignment: .topTrailing) { eventFeed }
             .overlay { bannerView }
@@ -195,19 +244,29 @@ struct SessionView: View {
                     LEDText(text: formatTime(left), size: 16, color: left <= 10 ? .red : .yellow)
                 }
             }
-            if let n = game.next {
+            if !game.canPickHere && game.next == nil {
                 HStack(spacing: 10) {
-                    ArtworkView(track: n, hidden: game.config.isSecret)
+                    ProgressView().tint(tint)
+                    Text(L.t("\(game.name(dj)) が相手の iPhone で選曲中…", "\(game.name(dj)) is picking on their iPhone…"))
+                        .font(.system(size: 14, weight: .bold))
+                    Spacer()
+                }
+                .frame(minHeight: 44)
+            } else if let n = game.next {
+                HStack(spacing: 10) {
+                    ArtworkView(track: n, hidden: nextHidden)
                         .frame(width: 44, height: 44)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     VStack(alignment: .leading) {
-                        Text(game.config.isSecret ? "SECRET TRACK 🔒" : n.title).font(.system(size: 15, weight: .bold)).lineLimit(1)
-                        Text(game.config.isSecret ? L.t("切り替わるまで秘密", "Hidden until it drops") : n.artist)
+                        Text(nextHidden ? "SECRET TRACK 🔒" : n.title).font(.system(size: 15, weight: .bold)).lineLimit(1)
+                        Text(nextHidden ? L.t("切り替わるまで秘密", "Hidden until it drops") : n.artist)
                             .font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
                     }
                     Spacer()
-                    Button(L.t("変更", "Change")) { openSearch() }.buttonStyle(.bordered).tint(tint)
-                    Button { game.clearNext() } label: { Image(systemName: "xmark") }.buttonStyle(.bordered).tint(.gray)
+                    if game.canPickHere {
+                        Button(L.t("変更", "Change")) { openSearch() }.buttonStyle(.bordered).tint(tint)
+                        Button { game.clearNext() } label: { Image(systemName: "xmark") }.buttonStyle(.bordered).tint(.gray)
+                    }
                 }
             } else {
                 HStack(spacing: 10) {
@@ -228,15 +287,20 @@ struct SessionView: View {
         .padding(.horizontal)
     }
 
+    /// SECRET TRACK。2台対戦なら自分で選んだ曲は自分の画面にだけ見せる
+    private var nextHidden: Bool { game.config.isSecret && !(game.localDJ != nil && game.canPickHere) }
+
     private func openSearch() {
-        if game.config.isSecret { showHandoff = true } else { showSearch = true }
+        guard game.canPickHere else { return }
+        // 2台対戦なら自分の iPhone なので、隠すための受け渡し画面はいらない
+        if game.config.isSecret && game.localDJ == nil { showHandoff = true } else { showSearch = true }
     }
 
     // MARK: 相手DJ・観客のリアクション
 
     private var interactions: some View {
         VStack(spacing: 8) {
-            if game.needsJudge {
+            if game.needsJudge && game.canJudgeHere {
                 HStack(spacing: 10) {
                     Text(game.config.mode == .shiritori
                          ? L.t("\(game.name(1 - game.currentOwner))：繋がってる？", "\(game.name(1 - game.currentOwner)): linked?")
@@ -258,7 +322,7 @@ struct SessionView: View {
                 .buttonStyle(.bordered)
                 .layoutPriority(1)
                 .tint(.pink)
-                .disabled(game.likedThisRound || game.current == nil)
+                .disabled(game.likedThisRound || game.current == nil || !game.canJudgeHere)
 
                 if game.showsPad {
                     ForEach(Reaction.allCases) { r in
@@ -280,23 +344,29 @@ struct SessionView: View {
     @ViewBuilder
     private var phaseOverlay: some View {
         switch game.phase {
-        case .searchingTrack:
+        case .searchingTrack where !isSplit:
             overlayCard {
                 LEDText(text: "OPENING", size: 30, color: .pink)
                 Text(L.t("\(game.name(game.selector)) が1曲目を選ぶ", "\(game.name(game.selector)) picks the opener"))
                     .font(.headline)
-                Button { openSearch() } label: { Label(L.t("1曲目を選ぶ", "PICK OPENER"), systemImage: "magnifyingglass") }
-                    .buttonStyle(NeonButtonStyle(color: .pink))
+                if game.canPickHere {
+                    Button { openSearch() } label: { Label(L.t("1曲目を選ぶ", "PICK OPENER"), systemImage: "magnifyingglass") }
+                        .buttonStyle(NeonButtonStyle(color: .pink))
+                } else {
+                    ProgressView().tint(.pink)
+                }
             }
-        case .waitingForNextDJ:
+        case .waitingForNextDJ where !isSplit:
             VStack {
                 Spacer()
                 VStack(spacing: 6) {
                     LEDText(text: L.t("無音！", "SILENCE!"), size: 30, color: .red)
                     Text(L.t("\(game.name(game.selector)) 早く次の曲を！", "\(game.name(game.selector)), drop the next track!"))
                         .font(.headline)
-                    Button { openSearch() } label: { Label(L.t("次の曲を選ぶ", "PICK NEXT TRACK"), systemImage: "magnifyingglass") }
-                        .buttonStyle(NeonButtonStyle(color: .red))
+                    if game.canPickHere {
+                        Button { openSearch() } label: { Label(L.t("次の曲を選ぶ", "PICK NEXT TRACK"), systemImage: "magnifyingglass") }
+                            .buttonStyle(NeonButtonStyle(color: .red))
+                    }
                 }
                 .padding(18)
                 .background(RoundedRectangle(cornerRadius: 18).fill(.black.opacity(0.88)))

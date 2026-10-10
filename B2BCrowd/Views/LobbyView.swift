@@ -4,13 +4,13 @@ struct LobbyView: View {
     @Environment(AppModel.self) private var app
     @Environment(MusicService.self) private var music
     @Environment(ProfileStore.self) private var profiles
+    @Environment(LinkService.self) private var link
     @State private var crowdSound = SoundFX.shared.enabled
 
     var body: some View {
-        @Bindable var app = app
         VStack(spacing: 0) {
             HStack {
-                Button { app.screen = .title } label: { Image(systemName: "chevron.left").font(.title3.bold()) }
+                Button { app.backToTitle() } label: { Image(systemName: "chevron.left").font(.title3.bold()) }
                 Spacer()
                 LEDText(text: "SESSION SETUP", size: 18, color: .cyan)
                 Spacer()
@@ -18,8 +18,149 @@ struct LobbyView: View {
             }
             .padding()
 
+            if link.role == .guest {
+                guestLobby
+            } else {
+                hostLobby
+            }
+        }
+        .foregroundStyle(.white)
+        .onChange(of: app.config.djNames) { _, _ in sendHello() }
+        .onChange(of: app.config.characters) { _, _ in sendHello() }
+    }
+
+    /// つながった後に名前・キャラを変えたら相手にも知らせる
+    private func sendHello() {
+        guard link.isConnected else { return }
+        let me = link.role == .guest ? 1 : 0
+        link.myName = app.config.djNames[me]
+        link.myCharacter = app.config.characters.count == 2 ? app.config.characters[me] : "c09"
+        link.send(.hello(name: link.myName, character: link.myCharacter))
+    }
+
+    private var hostConnected: Bool { link.role == .host && link.isConnected }
+
+    // MARK: 2台対戦
+
+    private var linkSection: some View {
+        section(L.t("iPhone 2台で対戦", "VERSUS ON 2 iPHONES")) {
+            switch link.role {
+            case .none:
+                Text(L.t("近くの iPhone とつないで、それぞれの iPhone で選曲。音はホストの iPhone から鳴ります（Wi‑Fi か Bluetooth をオン）。",
+                         "Link with a nearby iPhone and pick tracks on your own phone. Music plays from the host (turn on Wi‑Fi or Bluetooth)."))
+                    .font(.caption).foregroundStyle(.white.opacity(0.7))
+                HStack(spacing: 10) {
+                    Button {
+                        link.host(name: app.config.djNames[0], character: app.config.characters.first ?? "c09")
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text("HOST").font(.system(size: 15, weight: .black, design: .monospaced))
+                            Text(L.t("音を鳴らす側・DJ A", "Plays music · DJ A")).font(.system(size: 10, weight: .bold))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(NeonButtonStyle(color: .pink, filled: false))
+                    Button {
+                        link.join(name: app.config.djNames[1], character: app.config.characters.count == 2 ? app.config.characters[1] : "c02")
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text("JOIN").font(.system(size: 15, weight: .black, design: .monospaced))
+                            Text(L.t("相手に参加・DJ B", "Join a host · DJ B")).font(.system(size: 10, weight: .bold))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(NeonButtonStyle(color: .cyan, filled: false))
+                }
+            case .host:
+                HStack(spacing: 10) {
+                    if hostConnected {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Text(L.t("接続中：\(link.partnerName ?? "…")（DJ B）", "Linked: \(link.partnerName ?? "…") (DJ B)"))
+                            .font(.system(size: 14, weight: .bold))
+                    } else {
+                        ProgressView()
+                        Text(L.t("相手の iPhone で「JOIN」を押してもらってください", "Ask your partner to tap JOIN on their iPhone"))
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    Spacer()
+                    Button(L.t("やめる", "Stop")) { link.stop() }.buttonStyle(.bordered).tint(.gray)
+                }
+                if let e = link.lastError { Text(e).font(.caption).foregroundStyle(.orange) }
+            case .guest:
+                EmptyView()
+            }
+        }
+    }
+
+    private var guestLobby: some View {
+        VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    section(L.t("あなた（DJ B）", "YOU (DJ B)")) {
+                        djField(1)
+                        characterRow(1)
+                    }
+                    section(L.t("ホストにつなぐ", "CONNECT TO HOST")) {
+                        guestStatus
+                        if let e = link.lastError { Text(e).font(.caption).foregroundStyle(.orange) }
+                    }
+                    Text(L.t("曲はこの iPhone で探して送ります。ホストが Apple Music のときは、この iPhone でも Apple Music の許可が必要です。",
+                             "You search on this iPhone. If the host uses Apple Music, allow Apple Music on this iPhone too."))
+                        .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    MusicStatusCard()
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 20)
+            }
+            Button { link.stop() } label: { Text(L.t("2台対戦をやめる", "Leave versus")) }
+                .buttonStyle(NeonButtonStyle(color: .gray, filled: false))
+                .padding()
+        }
+    }
+
+    @ViewBuilder
+    private var guestStatus: some View {
+        if link.isConnected {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text(L.t("\(link.partnerName ?? "ホスト") につながりました", "Linked with \(link.partnerName ?? "host")"))
+                    .font(.system(size: 15, weight: .bold))
+            }
+            Text(L.t("ホストが START を押すと始まります。音はホストの iPhone から鳴ります。",
+                     "The session starts when the host taps START. Music plays from the host's iPhone."))
+                .font(.caption).foregroundStyle(.white.opacity(0.7))
+        } else if link.hosts.isEmpty {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text(L.t("近くのホストを探しています…", "Looking for a nearby host…")).font(.system(size: 13, weight: .bold))
+            }
+            Text(L.t("相手の iPhone で SESSION SETUP の「HOST」を押してもらってください。", "Ask your partner to tap HOST in SESSION SETUP."))
+                .font(.caption).foregroundStyle(.white.opacity(0.7))
+        } else {
+            ForEach(link.hosts) { h in
+                Button { link.connect(to: h) } label: {
+                    HStack {
+                        Image(systemName: "iphone.radiowaves.left.and.right")
+                        Text(h.name).font(.system(size: 15, weight: .bold))
+                        Spacer()
+                        if link.state == .connecting { ProgressView() } else { Text(L.t("つなぐ", "Connect")).font(.caption.bold()) }
+                    }
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.cyan.opacity(0.15)))
+                }
+                .buttonStyle(.plain)
+                .disabled(link.state == .connecting)
+            }
+        }
+    }
+
+    private var hostLobby: some View {
+        @Bindable var app = app
+        return VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    linkSection
+
                     section("DJ") {
                         djField(0)
                         djField(1)
@@ -27,7 +168,25 @@ struct LobbyView: View {
 
                     section(L.t("キャラ", "CHARACTER")) {
                         characterRow(0)
-                        characterRow(1)
+                        if hostConnected {
+                            Text("B · \(link.partnerName ?? "") — \(DJCharacter.named(link.partnerCharacter ?? "c02").name)")
+                                .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                                .foregroundStyle(.cyan)
+                        } else {
+                            characterRow(1)
+                        }
+                    }
+
+                    if link.role == .none {
+                        section(L.t("画面を2分割（iPhone Duo）", "SPLIT SCREEN (iPhone Duo)")) {
+                            Picker("", selection: $app.splitMode) {
+                                ForEach(SplitMode.allCases) { Text($0.title).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
+                            Text(L.t("iPhone Duo を開くと画面が左右に分かれ、2人がそれぞれの半分で同時に選曲できます。AUTO は広い画面のときだけ分けます。",
+                                     "On an open iPhone Duo the screen splits left and right so each DJ picks on their own half. AUTO splits only on wide screens."))
+                                .font(.caption).foregroundStyle(.white.opacity(0.6))
+                        }
                     }
 
                     section("MODE") {
@@ -117,7 +276,6 @@ struct LobbyView: View {
             .opacity(music.isReady ? 1 : 0.5)
             .padding()
         }
-        .foregroundStyle(.white)
     }
 
     private var crowdHelp: String {
@@ -153,12 +311,22 @@ struct LobbyView: View {
                 .font(.system(size: 18, weight: .black, design: .monospaced))
                 .foregroundStyle(i == 0 ? .pink : .cyan)
                 .frame(width: 28)
-            TextField("DJ NAME", text: $app.config.djNames[i])
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
-            if !profiles.profiles.isEmpty {
+            if i == 1 && hostConnected {
+                // DJ B は相手の iPhone の人
+                Text(link.partnerName ?? "")
+                    .font(.system(size: 17, weight: .bold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.cyan.opacity(0.12)))
+                Image(systemName: "iphone.radiowaves.left.and.right").foregroundStyle(.cyan)
+            } else {
+                TextField("DJ NAME", text: $app.config.djNames[i])
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
+            }
+            if !profiles.profiles.isEmpty, !(i == 1 && hostConnected) {
                 Menu {
                     ForEach(profiles.profiles) { p in
                         Button("\(p.icon) \(p.name)") { app.config.djNames[i] = p.name }

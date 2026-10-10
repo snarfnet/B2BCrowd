@@ -23,7 +23,20 @@ final class MusicKitPlayer: TrackPlayer {
     private var player: ApplicationMusicPlayer { ApplicationMusicPlayer.shared }
 
     func play(_ track: Track) async throws {
-        guard case .appleMusic(let song) = track.source else { return }
+        let song: Song
+        switch track.source {
+        case .appleMusic(let s):
+            song = s
+        case .appleMusicRef:
+            // 相手の iPhone で選ばれた曲。こちらのカタログから id で引き直す
+            let req = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(track.id))
+            guard let s = try await req.response().items.first else {
+                throw LinkError(L.t("この曲はこちらの Apple Music で見つかりません", "This track isn't in this Apple Music storefront"))
+            }
+            song = s
+        default:
+            return
+        }
         player.queue = ApplicationMusicPlayer.Queue(for: [song])
         try await player.prepareToPlay()
         try await player.play()

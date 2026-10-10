@@ -48,11 +48,13 @@ struct ResultView: View {
                     .buttonStyle(NeonButtonStyle(color: .cyan, filled: false))
                 }
 
+                if app.link.role != .guest {
                 Button { app.start() } label: { Label(L.t("同じ設定でもう一回", "REMATCH"), systemImage: "arrow.clockwise") }
                     .buttonStyle(NeonButtonStyle(color: .pink))
-                Button { app.screen = .lobby } label: { Text(L.t("設定を変える", "CHANGE SETUP")) }
+                }
+                Button { app.backToLobby() } label: { Text(L.t("設定を変える", "CHANGE SETUP")) }
                     .buttonStyle(NeonButtonStyle(color: .cyan, filled: false))
-                Button { app.screen = .title } label: { Text("TITLE") }
+                Button { app.backToTitle() } label: { Text("TITLE") }
                     .foregroundStyle(.white.opacity(0.7))
                     .padding(.bottom, 30)
             }

@@ -5,6 +5,8 @@ import SwiftUI
 struct SearchView: View {
     let game: GameEngine
     var initialTab = 0
+    /// 画面の半分に埋め込む（iPhone Duo の左右分割）。閉じるボタン・前回の検索の引き継ぎは無し
+    var embeddedDJ: Int? = nil
     let onPick: (Track) -> Void
 
     @Environment(MusicService.self) private var music
@@ -49,11 +51,13 @@ struct SearchView: View {
             .background(Color.black)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
                         prompt: isAudius ? "Search Audius" : L.t("曲名・アーティスト", "Song or artist"))
-            .navigationTitle("NEXT TRACK · \(game.name(game.selector))")
+            .navigationTitle(embeddedDJ.map { game.name($0) } ?? "NEXT TRACK · \(game.name(game.selector))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("閉じる", "Close")) { dismiss() }
+                if embeddedDJ == nil {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L.t("閉じる", "Close")) { dismiss() }
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Text(music.sourceLabel)
@@ -63,21 +67,21 @@ struct SearchView: View {
             }
             .task(id: loadKey) {
                 // 前回と同じ検索ならそのまま見せる（開き直しても結果が消えない）
-                if let m = SearchMemory.last, m.key == loadKey, !m.results.isEmpty {
+                if embeddedDJ == nil, let m = SearchMemory.last, m.key == loadKey, !m.results.isEmpty {
                     results = m.results; blocked = m.blocked; canLoadMore = m.canLoadMore; error = nil
                     return
                 }
                 await load()
             }
             .onAppear {
-                if let m = SearchMemory.last, m.source == music.sourceLabel {
+                if embeddedDJ == nil, let m = SearchMemory.last, m.source == music.sourceLabel {
                     query = m.query; source = m.tab; trending = m.trending
                     results = m.results; blocked = m.blocked; canLoadMore = m.canLoadMore
                 } else if initialTab != 0 {
                     source = initialTab
                 }
             }
-            .onChange(of: results.map(\.id)) { _, _ in remember() }
+            .onChange(of: results.map(\.id)) { _, _ in if embeddedDJ == nil { remember() } }
         }
         .preferredColorScheme(.dark)
     }
@@ -190,7 +194,7 @@ struct SearchView: View {
             Button("SELECT") { pick(t) }
                 .font(.system(size: 12, weight: .heavy, design: .monospaced))
                 .buttonStyle(.borderedProminent)
-                .tint(game.selector == 0 ? .pink : .cyan)
+                .tint((embeddedDJ ?? game.selector) == 0 ? .pink : .cyan)
                 .disabled(reason != nil)
         }
         .foregroundStyle(.white)
@@ -313,7 +317,7 @@ struct SearchView: View {
     private func pick(_ t: Track) {
         if t.audius != nil { RecentAudiusPicks.add(t) }
         onPick(t)
-        dismiss()
+        if embeddedDJ == nil { dismiss() }
     }
 }
 

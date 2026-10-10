@@ -41,6 +41,10 @@ targets:
         LSRequiresIPhoneOS: true
         AudiusAPIKey: "$(AUDIUS_API_KEY)"
         NSAppleMusicUsageDescription: "Apple Music の曲を検索して再生し、B2B 選曲ゲームで使うためにアクセスします。"
+        NSLocalNetworkUsageDescription: "近くの iPhone とつないで、2台で B2B 対戦をするために使います。"
+        NSBonjourServices:
+          - _b2bcrowd._tcp
+          - _b2bcrowd._udp
         UILaunchScreen:
           UIColorName: ""
         UIStatusBarStyle: UIStatusBarStyleLightContent
