@@ -239,6 +239,7 @@ struct SessionView: View {
         return VStack(spacing: 8) {
             HStack {
                 LEDText(text: "NEXT ▶ \(game.name(dj))", size: 14, color: tint)
+                if game.isAuto(dj) { autoBadge }
                 Spacer()
                 if let left = game.selectionTimeLeft {
                     LEDText(text: formatTime(left), size: 16, color: left <= 10 ? .red : .yellow)
@@ -247,7 +248,9 @@ struct SessionView: View {
             if !game.canPickHere && game.next == nil {
                 HStack(spacing: 10) {
                     ProgressView().tint(tint)
-                    Text(L.t("\(game.name(dj)) が相手の iPhone で選曲中…", "\(game.name(dj)) is picking on their iPhone…"))
+                    Text(game.isAuto(dj)
+                         ? L.t("AUTO：\(game.name(dj)) が曲を探しています…", "AUTO: \(game.name(dj)) is digging for a track…")
+                         : L.t("\(game.name(dj)) が相手の iPhone で選曲中…", "\(game.name(dj)) is picking on their iPhone…"))
                         .font(.system(size: 14, weight: .bold))
                     Spacer()
                 }
@@ -285,6 +288,13 @@ struct SessionView: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(tint.opacity(0.08)))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(tint.opacity(0.4)))
         .padding(.horizontal)
+    }
+
+    private var autoBadge: some View {
+        Text("AUTO").font(.system(size: 10, weight: .black, design: .monospaced))
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Capsule().fill(Color.yellow.opacity(0.3)))
+            .foregroundStyle(.yellow)
     }
 
     /// SECRET TRACK。2台対戦なら自分で選んだ曲は自分の画面にだけ見せる

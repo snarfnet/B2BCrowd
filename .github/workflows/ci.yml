@@ -71,6 +71,8 @@ jobs:
         rec 21_booth; run session -boothcam; sleep 12; shot 09_booth_a
         sleep 15; shot 10_booth_b; stop
         run result; sleep 125; shot 08_result
+        run auto; sleep 20; shot 17_auto
+        sleep 40; shot 18_auto_later
         run split; sleep 20; shot 15_split
         sleep 25; shot 16_split_later
         run audiussearch; sleep 15; shot 13_audius_trending
@@ -90,10 +92,10 @@ jobs:
         xcrun simctl launch "$UDID" com.tokyonasu.B2BCrowd -AppleLanguages "(ja)" -shot linkhost
         sleep 4
         xcrun simctl launch "$UDID2" com.tokyonasu.B2BCrowd -AppleLanguages "(ja)" -shot linkguest
-        sleep 12; shot 30_link_host_lobby; shot2 31_link_guest_lobby
-        sleep 20; shot 32_link_host_play; shot2 33_link_guest_play
-        sleep 30; shot 34_link_host_later; shot2 35_link_guest_later
-        sleep 60; shot 36_link_host_end; shot2 37_link_guest_end
+        date; sleep 6; shot 30_link_host_lobby; shot2 31_link_guest_lobby
+        date; sleep 15; shot 32_link_host_play; shot2 33_link_guest_play
+        date; sleep 30; shot 34_link_host_later; shot2 35_link_guest_later
+        date; sleep 200; shot 36_link_host_end; shot2 37_link_guest_end
         xcrun simctl spawn "$UDID2" log show --last 5m --predicate 'process == "B2BCrowd"' --style compact > shots/app_guest.log 2>&1 || true
         xcrun simctl spawn "$UDID" log show --last 15m --predicate 'process == "B2BCrowd"' --style compact > shots/app.log 2>&1 || true
         mkdir -p shots/crash

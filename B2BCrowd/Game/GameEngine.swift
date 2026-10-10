@@ -73,14 +73,23 @@ final class GameEngine {
     var onTick: (() -> Void)?
     private var lastAutoPick: Date = .distantPast
 
+    // AUTO DJ
+    /// 曲を探す処理（音楽サービスを知っている AppModel が入れる）
+    var autoPicker: ((GameEngine) async -> Track?)?
+    private var autoPicking = false
+    private var autoDelay: TimeInterval = 6
+
     init(config: SessionConfig, player: TrackPlayer, mirror: Bool = false) {
         self.config = config
         self.player = player
         self.isMirror = mirror
     }
 
-    /// この iPhone の人が次の曲を選べるか
-    var canPickHere: Bool { localDJ == nil || selector == localDJ }
+    /// この iPhone の人が次の曲を選べるか（AUTO DJ の番は選べない）
+    var canPickHere: Bool { (localDJ == nil || selector == localDJ) && !config.isAuto(selector) }
+    func isAuto(_ dj: Int) -> Bool { config.isAuto(dj) }
+    /// AUTO DJ が曲を探している
+    var isAutoSearching: Bool { autoPicking }
     /// LIKE・お題の判定は、いま流れている曲の相手 DJ がする
     var canJudgeHere: Bool { localDJ == nil || currentOwner != localDJ }
 
@@ -286,6 +295,28 @@ final class GameEngine {
     /// autopilot が選ぶ曲（空ならデモ曲）
     var autopilotPool: [Track] = []
 
+    /// AUTO DJ の番：少し考えるふりをしてから（数秒〜十数秒）曲を探して予約する
+    private func autoDJStep() {
+        guard config.isAuto(selector), next == nil, !autoPicking, let autoPicker,
+              phase == .searchingTrack || phase == .waitingForNextDJ || phase == .playing || phase == .countdown else { return }
+        let urgent = phase != .playing
+        guard urgent || selectionElapsed >= autoDelay else { return }
+        autoPicking = true
+        let who = selector
+        Task { @MainActor in
+            let t = await autoPicker(self)
+            self.autoPicking = false
+            self.autoDelay = Double.random(in: 5...14)
+            guard self.selector == who, self.next == nil, self.phase != .result else { return }
+            if let t {
+                self.reserve(t)
+            } else {
+                self.flash(.notice(L.t("AUTO：候補の曲が見つかりません", "AUTO: no track found")))
+                self.pass()
+            }
+        }
+    }
+
     private func autopilotStep() {
         if next == nil, canPickHere, phase != .transition, phase != .paused, phase != .result,
            phase == .searchingTrack || phase == .waitingForNextDJ || selectionElapsed > 4 {
@@ -306,6 +337,7 @@ final class GameEngine {
         }
         defer { onTick?() }
         if autopilot { autopilotStep() }
+        autoDJStep()
         SoundFX.shared.updateCrowd(energy: energy, active: phase != .paused && phase != .result)
         switch phase {
         case .playing, .countdown:

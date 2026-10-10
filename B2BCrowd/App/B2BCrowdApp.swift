@@ -61,11 +61,16 @@ final class AppModel {
         if link.role == .guest { return }
         var c = config
         if link.role == .host, link.isConnected {
-            // DJ B は相手の iPhone の人
+            // DJ B は相手の iPhone の人（AUTO にはしない）
+            c.autoDJ = [c.isAuto(0), false]
             c.djNames[1] = link.partnerName ?? c.djNames[1]
             if c.characters.count == 2, let pc = link.partnerCharacter { c.characters[1] = pc }
         }
         let engine = GameEngine(config: c, player: music.player)
+        engine.autoPicker = { [weak self] g in
+            guard let self else { return nil }
+            return await AutoSelector.pick(for: g, music: self.music)
+        }
         if link.role == .host, link.isConnected {
             engine.localDJ = 0
             engine.autopilot = linkAutopilot
@@ -133,8 +138,8 @@ final class AppModel {
         case "linkhost", "linkguest":
             // 2台対戦の確認：シミュレーター2台でホストとゲストを立て、つながったら自動で回す
             linkAutopilot = true
-            config.length = 4
-            config.playLimit = 20
+            config.length = 8
+            config.playLimit = 30
             config.mode = .free
             config.venue = .forestRave
             if args[i + 1] == "linkhost" {
@@ -154,6 +159,18 @@ final class AppModel {
                     link.connect(to: link.hosts[0])
                 }
             }
+        case "auto":
+            // 両方 AUTO DJ（autopilot は使わず、AUTO の選曲だけで回る）
+            var c = SessionConfig()
+            c.djNames = ["DJ KAORI", "AUTO NEON"]
+            c.mode = .genre
+            c.genreID = "HOUSE"
+            c.length = 4
+            c.playLimit = 20
+            c.venue = .warehouse
+            c.autoDJ = [true, true]
+            config = c
+            start()
         case "split":
             splitMode = .on
             var c = SessionConfig()

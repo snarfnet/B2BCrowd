@@ -365,6 +365,10 @@ struct SessionConfig: Codable {
     var timeLimit: Int = 45         // TIME ATTACK の秒数
     var playLimit: Int = 90         // 1曲の再生上限（0 = 最後まで）
     var venue: Venue = .smallClub
+    /// AUTO DJ（その DJ の番になったら自動で選曲）。古い保存データに無いので省略可
+    var autoDJ: [Bool]? = nil
+
+    func isAuto(_ dj: Int) -> Bool { (autoDJ ?? []).indices.contains(dj) && autoDJ![dj] }
 
     var isSecret: Bool { secret || mode == .secret }
     var genre: GenreRule { GenreRule.all.first { $0.id == genreID } ?? GenreRule.all[0] }

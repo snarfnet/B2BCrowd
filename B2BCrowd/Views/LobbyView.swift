@@ -164,6 +164,8 @@ struct LobbyView: View {
                     section("DJ") {
                         djField(0)
                         djField(1)
+                        Text(L.t("AUTO にした DJ は、自分の番になると今の曲やモードに合う曲を自動で選びます。", "An AUTO DJ picks a track that fits the current one and the mode when it's their turn."))
+                            .font(.caption).foregroundStyle(.white.opacity(0.6))
                     }
 
                     section(L.t("キャラ", "CHARACTER")) {
@@ -325,6 +327,22 @@ struct LobbyView: View {
                     .autocorrectionDisabled()
                     .padding(10)
                     .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
+            }
+            if link.role != .guest, !(i == 1 && hostConnected) {
+                // AUTO DJ：この DJ の番は自動で選曲（1人で AUTO と対戦、両方 AUTO で流しっぱなしも）
+                Button {
+                    var a = app.config.autoDJ ?? [false, false]
+                    if a.count != 2 { a = [false, false] }
+                    a[i].toggle()
+                    app.config.autoDJ = a
+                } label: {
+                    Text("AUTO").font(.system(size: 11, weight: .black, design: .monospaced))
+                        .padding(.horizontal, 8).padding(.vertical, 6)
+                        .background(Capsule().fill(app.config.isAuto(i) ? Color.yellow.opacity(0.35) : .white.opacity(0.08)))
+                        .overlay(Capsule().stroke(app.config.isAuto(i) ? .yellow : .clear))
+                        .foregroundStyle(app.config.isAuto(i) ? .yellow : .white.opacity(0.6))
+                }
+                .buttonStyle(.plain)
             }
             if !profiles.profiles.isEmpty, !(i == 1 && hostConnected) {
                 Menu {

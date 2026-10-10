@@ -8,7 +8,8 @@ struct SplitColumn: View {
     let dj: Int
 
     private var tint: Color { dj == 0 ? .pink : .cyan }
-    private var myTurn: Bool { game.selector == dj }
+    /// 自分で選ぶ番（AUTO DJ の番は自動で選ぶので検索画面は出さない）
+    private var myTurn: Bool { game.selector == dj && !game.isAuto(dj) }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -36,6 +37,7 @@ struct SplitColumn: View {
         HStack(spacing: 6) {
             LEDText(text: dj == 0 ? "A" : "B", size: 16, color: tint)
             Text(game.name(dj)).font(.system(size: 13, weight: .black)).lineLimit(1)
+            if game.isAuto(dj) { Text("AUTO").font(.system(size: 9, weight: .black, design: .monospaced)).foregroundStyle(.yellow) }
             Spacer(minLength: 2)
             if myTurn, let left = game.selectionTimeLeft {
                 LEDText(text: formatTime(left), size: 13, color: left <= 10 ? .red : .yellow)
@@ -120,7 +122,9 @@ struct SplitColumn: View {
                     .shadow(color: tint.opacity(0.6), radius: 14)
                 Text(game.current?.title ?? "").font(.system(size: 14, weight: .bold)).lineLimit(1)
             }
-            Text(game.phase == .searchingTrack
+            Text(game.isAuto(dj) && game.selector == dj
+                 ? L.t("AUTO が曲を探しています…", "AUTO is digging for a track…")
+                 : game.phase == .searchingTrack
                  ? L.t("\(game.name(1 - dj)) が1曲目を選んでいます", "\(game.name(1 - dj)) is picking the opener")
                  : L.t("\(game.name(1 - dj)) が次の曲を選んでいます", "\(game.name(1 - dj)) is picking next"))
                 .font(.system(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.7))
