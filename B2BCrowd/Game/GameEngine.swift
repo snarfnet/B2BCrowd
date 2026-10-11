@@ -424,18 +424,27 @@ final class GameEngine {
         }
     }
 
+    /// 次の曲はすぐ鳴らす（前の曲から隙間なく）。DJ が手を上げる演出とテロップはその上で 2.6 秒
     private func beginTransition() {
-        guard next != nil else { return }
+        guard let t = next else { return }
         phase = .transition
         SoundFX.shared.play(.drop)
+        MusicAnalytics.shared.count(.playAttempt)
+        let play = Task { @MainActor () -> Error? in
+            do { try await self.player.play(t); return nil } catch { return error }
+        }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2.6))
-            await self.startNext()
+            await self.startNext(started: play)
         }
     }
 
-    private func startNext() async {
-        guard phase == .transition, let t = next else { return }
+    private func startNext(started: Task<Error?, Never>) async {
+        guard phase == .transition, let t = next else {
+            _ = await started.value
+            if phase == .result { player.stop() }   // ended during the drop: don't leave the new song playing
+            return
+        }
         let owner = selector
         next = nil
         current = t
@@ -448,9 +457,8 @@ final class GameEngine {
         nextAmbient = 5
         decayLeft = 6 + energy * 0.1
 
-        MusicAnalytics.shared.count(.playAttempt)
         do {
-            try await player.play(t)
+            if let e = await started.value { throw e }
         } catch {
             // 再生できない曲（地域制限・アクセス制限・通信エラーなど）は罰なしで選び直し。セッションは続ける
             MusicAnalytics.shared.count(.playError)
