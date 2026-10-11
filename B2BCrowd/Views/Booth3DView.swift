@@ -1460,18 +1460,24 @@ final class ClubScene: NSObject, SCNSceneRendererDelegate, @unchecked Sendable {
         let top = host.djLayers[djTop], next = host.djLayers[back]
         djTop = back
         next.player = player
-        host.layer.insertSublayer(next, above: top)
-        CATransaction.begin()
-        CATransaction.setAnimationDuration(0.35)
-        next.opacity = 1
-        CATransaction.commit()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        // the DJ layers live in their own host view above the 3D (particles behind the DJ): reorder inside it
+        if let parent = top.superlayer { parent.insertSublayer(next, above: top) }
+        // hard cut, not a crossfade: two poses overlapping read as four arms. Swap the moment the new clip has a frame
+        // (until then the old one stays, so there is no blank frame either)
+        func swap(_ tries: Int) {
+            guard djShown == key else { return }   // a newer clip took over meanwhile
+            if !next.isReadyForDisplay && tries > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { swap(tries - 1) }
+                return
+            }
             CATransaction.begin()
             CATransaction.setDisableActions(true)
+            next.opacity = 1
             top.opacity = 0
-            if top.player !== player { top.player?.pause(); top.player = nil }
             CATransaction.commit()
+            if top.player !== player { top.player?.pause(); top.player = nil }
         }
+        swap(20)
     }
 
     // MARK: 観客の反応 → パーティクル演出

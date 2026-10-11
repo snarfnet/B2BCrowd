@@ -6,6 +6,8 @@ struct LobbyView: View {
     @Environment(ProfileStore.self) private var profiles
     @Environment(LinkService.self) private var link
     @State private var crowdSound = SoundFX.shared.enabled
+    @State private var showMore = false
+    @State private var wantLink = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,7 +45,7 @@ struct LobbyView: View {
     // MARK: 2台対戦
 
     private var linkSection: some View {
-        section(L.t("iPhone 2台で対戦", "VERSUS ON 2 iPHONES")) {
+        VStack(alignment: .leading, spacing: 10) {
             switch link.role {
             case .none:
                 Text(L.t("近くの iPhone とつないで、それぞれの iPhone で選曲。音はホストの iPhone から鳴ります（Wi‑Fi か Bluetooth をオン）。",
@@ -153,22 +155,79 @@ struct LobbyView: View {
         }
     }
 
+    // だれと遊ぶか（設定画面のいちばん上）
+    enum Opponent: CaseIterable { case duo, auto, watch, link }
+    private var opponent: Opponent {
+        if wantLink || link.role != .none { return .link }
+        if app.config.isAuto(0) && app.config.isAuto(1) { return .watch }
+        if app.config.isAuto(1) { return .auto }
+        return .duo
+    }
+    private func setOpponent(_ o: Opponent) {
+        wantLink = o == .link
+        if o != .link, link.role != .none { link.stop() }
+        switch o {
+        case .duo, .link: app.config.autoDJ = [false, false]
+        case .auto: app.config.autoDJ = [false, true]
+        case .watch: app.config.autoDJ = [true, true]
+        }
+    }
+    private func opponentCard(_ o: Opponent) -> some View {
+        let on = opponent == o
+        let (icon, title, sub): (String, String, String) = {
+            switch o {
+            case .duo: return ("person.2.fill", L.t("ふたりで交代", "2 DJs, 1 iPhone"), L.t("この iPhone を回して B2B", "Pass this iPhone back and forth"))
+            case .auto: return ("cpu", L.t("AUTO DJ と対戦", "VS AUTO DJ"), L.t("相手は自動で曲を選ぶ", "Your partner picks by itself"))
+            case .watch: return ("play.circle.fill", L.t("流しっぱなし", "Just play"), L.t("両方 AUTO で自動 DJ", "Both AUTO, sit back"))
+            case .link: return ("iphone.radiowaves.left.and.right", L.t("iPhone 2台で対戦", "2 iPhones"), L.t("近くの iPhone とつなぐ", "Link a nearby iPhone"))
+            }
+        }()
+        return Button { setOpponent(o) } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.title2).frame(width: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 14, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(sub).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.65)).lineLimit(1).minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(RoundedRectangle(cornerRadius: 12).fill(on ? Color.pink.opacity(0.3) : .white.opacity(0.06)))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(on ? Color.pink : .white.opacity(0.1), lineWidth: on ? 2 : 1))
+            .foregroundStyle(.white)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func step(_ n: Int, _ title: String) -> some View {
+        HStack(spacing: 8) {
+            Text("\(n)").font(.system(size: 13, weight: .black, design: .monospaced))
+                .frame(width: 24, height: 24).background(Circle().fill(Color.pink)).foregroundStyle(.black)
+            Text(title).font(.system(size: 16, weight: .heavy))
+        }
+    }
+
     private var hostLobby: some View {
         @Bindable var app = app
         return VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    linkSection
-
-                    section("DJ") {
-                        djField(0)
-                        djField(1)
-                        Text(L.t("AUTO にした DJ は、自分の番になると今の曲やモードに合う曲を自動で選びます。", "An AUTO DJ picks a track that fits the current one and the mode when it's their turn."))
-                            .font(.caption).foregroundStyle(.white.opacity(0.6))
+                VStack(alignment: .leading, spacing: 26) {
+                    // 1 だれと遊ぶ
+                    VStack(alignment: .leading, spacing: 10) {
+                        step(1, L.t("だれと遊ぶ？", "Who's playing?"))
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                            ForEach(Opponent.allCases, id: \.self) { o in opponentCard(o) }
+                        }
+                        if opponent == .link { linkSection }
                     }
 
-                    section(L.t("キャラ", "CHARACTER")) {
+                    // 2 DJ（名前とキャラ）
+                    VStack(alignment: .leading, spacing: 12) {
+                        step(2, "DJ")
+                        djField(0)
                         characterRow(0)
+                        djField(1)
                         if hostConnected {
                             Text("B · \(link.partnerName ?? "") — \(DJCharacter.named(link.partnerCharacter ?? "c02").name)")
                                 .font(.system(size: 12, weight: .heavy, design: .monospaced))
@@ -178,26 +237,17 @@ struct LobbyView: View {
                         }
                     }
 
-                    if link.role == .none {
-                        section(L.t("画面を2分割（iPhone Duo）", "SPLIT SCREEN (iPhone Duo)")) {
-                            Picker("", selection: $app.splitMode) {
-                                ForEach(SplitMode.allCases) { Text($0.title).tag($0) }
-                            }
-                            .pickerStyle(.segmented)
-                            Text(L.t("iPhone Duo を開くと画面が左右に分かれ、2人がそれぞれの半分で同時に選曲できます。AUTO は広い画面のときだけ分けます。",
-                                     "On an open iPhone Duo the screen splits left and right so each DJ picks on their own half. AUTO splits only on wide screens."))
-                                .font(.caption).foregroundStyle(.white.opacity(0.6))
-                        }
-                    }
-
-                    // 会場（ステージ）：全部が一度に見えるよう 2 列のカード。タップで切り替え
-                    section(L.t("会場（ステージ）", "VENUE")) {
+                    // 3 会場
+                    VStack(alignment: .leading, spacing: 10) {
+                        step(3, L.t("会場", "Venue"))
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(Venue.allCases) { v in venueCard(v) }
                         }
                     }
 
-                    section("MODE") {
+                    // 4 遊び方
+                    VStack(alignment: .leading, spacing: 10) {
+                        step(4, L.t("遊び方", "Mode"))
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                             ForEach(GameMode.allCases) { m in modeCard(m) }
                         }
@@ -205,61 +255,76 @@ struct LobbyView: View {
                         modeOptions
                     }
 
-                    section("SESSION LENGTH") {
-                        Picker("", selection: $app.config.length) {
-                            Text("5").tag(5); Text("10").tag(10); Text("20").tag(20); Text("ENDLESS").tag(0)
-                        }
-                        .pickerStyle(.segmented)
-                    }
+                    // 音楽（Apple Music / Audius / DEMO）
+                    MusicStatusCard()
 
-                    section(L.t("1曲の再生時間", "PLAY TIME PER TRACK")) {
-                        Picker("", selection: $app.config.playLimit) {
-                            Text("30s").tag(30); Text("60s").tag(60); Text("90s").tag(90); Text("FULL").tag(0)
-                        }
-                        .pickerStyle(.segmented)
-                        Text(L.t("時間が来たら次の曲へ切り替わります（曲同士を重ねるミックスはしません）。", "When time is up the next track starts. Tracks are never mixed together."))
-                            .font(.caption).foregroundStyle(.white.opacity(0.6))
-                    }
-
-                    section("SECRET TRACK") {
-                        Toggle(L.t("次の曲を相手に隠す", "Hide next track from partner"), isOn: $app.config.secret)
-                            .disabled(app.config.mode == .secret)
-                            .tint(.purple)
-                    }
-
-                    section("CROWD") {
-                        Picker("", selection: $app.config.crowd) {
-                            ForEach(CrowdMode.allCases) { Text($0.title).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        Text(crowdHelp).font(.caption).foregroundStyle(.white.opacity(0.6))
-                    }
-
-                    section(L.t("観客の声", "CROWD SOUND")) {
-                        Toggle(L.t("歓声・指笛・拍手を鳴らす", "Cheers, whistles and applause"), isOn: $crowdSound)
-                            .tint(.pink)
-                            .onChange(of: crowdSound) { _, v in SoundFX.shared.enabled = v }
-                    }
-
-                    section("VJ") {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(VJMode.allCases) { m in
-                                    Button(m.title) { app.config.vjMode = m }
-                                        .font(.system(size: 12, weight: .heavy, design: .monospaced))
-                                        .padding(.horizontal, 12).padding(.vertical, 7)
-                                        .background(Capsule().fill(app.config.vjMode == m ? Color.purple.opacity(0.45) : .white.opacity(0.08)))
-                                        .overlay(Capsule().stroke(app.config.vjMode == m ? .purple : .clear))
-                                        .buttonStyle(.plain)
+                    // そのほか（ふだんは閉じておく）
+                    DisclosureGroup(isExpanded: $showMore) {
+                        VStack(alignment: .leading, spacing: 22) {
+                            section(L.t("曲数", "SESSION LENGTH")) {
+                                Picker("", selection: $app.config.length) {
+                                    Text("5").tag(5); Text("10").tag(10); Text("20").tag(20); Text("ENDLESS").tag(0)
+                                }
+                                .pickerStyle(.segmented)
+                            }
+                            section(L.t("1曲の再生時間", "PLAY TIME PER TRACK")) {
+                                Picker("", selection: $app.config.playLimit) {
+                                    Text("30s").tag(30); Text("60s").tag(60); Text("90s").tag(90); Text("FULL").tag(0)
+                                }
+                                .pickerStyle(.segmented)
+                                Text(L.t("時間が来たら次の曲へ切り替わります（曲同士を重ねるミックスはしません）。", "When time is up the next track starts. Tracks are never mixed together."))
+                                    .font(.caption).foregroundStyle(.white.opacity(0.6))
+                            }
+                            section("SECRET TRACK") {
+                                Toggle(L.t("次の曲を相手に隠す", "Hide next track from partner"), isOn: $app.config.secret)
+                                    .disabled(app.config.mode == .secret)
+                                    .tint(.purple)
+                            }
+                            section(L.t("観客", "CROWD")) {
+                                Picker("", selection: $app.config.crowd) {
+                                    ForEach(CrowdMode.allCases) { Text($0.title).tag($0) }
+                                }
+                                .pickerStyle(.segmented)
+                                Text(crowdHelp).font(.caption).foregroundStyle(.white.opacity(0.6))
+                                Toggle(L.t("歓声・指笛・拍手を鳴らす", "Cheers, whistles and applause"), isOn: $crowdSound)
+                                    .tint(.pink)
+                                    .onChange(of: crowdSound) { _, v in SoundFX.shared.enabled = v }
+                            }
+                            section("VJ") {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(VJMode.allCases) { m in
+                                            Button(m.title) { app.config.vjMode = m }
+                                                .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                                                .padding(.horizontal, 12).padding(.vertical, 7)
+                                                .background(Capsule().fill(app.config.vjMode == m ? Color.purple.opacity(0.45) : .white.opacity(0.08)))
+                                                .overlay(Capsule().stroke(app.config.vjMode == m ? .purple : .clear))
+                                                .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                                Text(L.t("LED 画面の映像。曲のジャケットとタイトル、盛り上がりで変わります（音は解析しません）。",
+                                         "Visuals on the LED screens, driven by artwork, title and crowd energy (no audio analysis)."))
+                                    .font(.caption).foregroundStyle(.white.opacity(0.6))
+                            }
+                            if link.role == .none {
+                                section(L.t("画面を2分割（iPhone Duo）", "SPLIT SCREEN (iPhone Duo)")) {
+                                    Picker("", selection: $app.splitMode) {
+                                        ForEach(SplitMode.allCases) { Text($0.title).tag($0) }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    Text(L.t("iPhone Duo を開くと画面が左右に分かれ、2人がそれぞれの半分で同時に選曲できます。AUTO は広い画面のときだけ分けます。",
+                                             "On an open iPhone Duo the screen splits left and right so each DJ picks on their own half. AUTO splits only on wide screens."))
+                                        .font(.caption).foregroundStyle(.white.opacity(0.6))
                                 }
                             }
                         }
-                        Text(L.t("LED 画面の映像。曲のジャケットとタイトル、盛り上がりで変わります（音は解析しません）。",
-                                 "Visuals on the LED screens, driven by artwork, title and crowd energy (no audio analysis)."))
-                            .font(.caption).foregroundStyle(.white.opacity(0.6))
+                        .padding(.top, 12)
+                    } label: {
+                        Text(L.t("そのほかの設定（曲数・再生時間・観客・VJ など）", "More settings (length, play time, crowd, VJ...)"))
+                            .font(.system(size: 14, weight: .heavy))
                     }
-
-                    MusicStatusCard()
+                    .tint(.white)
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
@@ -325,22 +390,6 @@ struct LobbyView: View {
                     .autocorrectionDisabled()
                     .padding(10)
                     .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
-            }
-            if link.role != .guest, !(i == 1 && hostConnected) {
-                // AUTO DJ：この DJ の番は自動で選曲（1人で AUTO と対戦、両方 AUTO で流しっぱなしも）
-                Button {
-                    var a = app.config.autoDJ ?? [false, false]
-                    if a.count != 2 { a = [false, false] }
-                    a[i].toggle()
-                    app.config.autoDJ = a
-                } label: {
-                    Text("AUTO").font(.system(size: 11, weight: .black, design: .monospaced))
-                        .padding(.horizontal, 8).padding(.vertical, 6)
-                        .background(Capsule().fill(app.config.isAuto(i) ? Color.yellow.opacity(0.35) : .white.opacity(0.08)))
-                        .overlay(Capsule().stroke(app.config.isAuto(i) ? .yellow : .clear))
-                        .foregroundStyle(app.config.isAuto(i) ? .yellow : .white.opacity(0.6))
-                }
-                .buttonStyle(.plain)
             }
             if !profiles.profiles.isEmpty, !(i == 1 && hostConnected) {
                 Menu {
