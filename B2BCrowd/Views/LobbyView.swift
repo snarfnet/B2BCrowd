@@ -241,7 +241,7 @@ struct LobbyView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         step(3, L.t("会場", "Venue", hans: "场地", hant: "場地"))
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                            ForEach(Venue.allCases) { v in venueCard(v) }
+                            ForEach(Venue.selectable) { v in venueCard(v) }
                         }
                     }
 

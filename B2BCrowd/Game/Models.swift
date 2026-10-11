@@ -292,9 +292,12 @@ enum CrowdMode: String, CaseIterable, Identifiable, Codable {
 enum Venue: String, CaseIterable, Identifiable, Codable {
     case smallClub, underground, warehouse, rooftop, beach, tokyoNight, cyberClub, megaFestival, spaceClub, forestRave, recordShop, shibuyaStreet, cruiseDeck
     var id: String { rawValue }
+    /// 設定画面で選べる会場（観客の動画がそれぞれ違うものだけ）。ほかの会場は古い保存データ用に残している
+    static let selectable: [Venue] = [.smallClub, .forestRave, .recordShop, .shibuyaStreet, .cruiseDeck]
+    var isSelectable: Bool { Venue.selectable.contains(self) }
     var label: String {
         switch self {
-        case .smallClub: return L.t("小さなクラブ", "SMALL CLUB", hans: "小型俱乐部", hant: "小型夜店")
+        case .smallClub: return L.t("クラブ", "CLUB", hans: "俱乐部", hant: "夜店")
         case .underground: return L.t("地下クラブ", "UNDERGROUND", hans: "地下俱乐部", hant: "地下夜店")
         case .warehouse: return L.t("倉庫レイヴ", "WAREHOUSE", hans: "仓库锐舞", hant: "倉庫派對")
         case .rooftop: return L.t("屋上", "ROOFTOP", hans: "屋顶", hant: "屋頂")
@@ -312,7 +315,7 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
 
     var title: String {
         switch self {
-        case .smallClub: return "SMALL CLUB"
+        case .smallClub: return "CLUB"
         case .underground: return "UNDERGROUND"
         case .warehouse: return "WAREHOUSE"
         case .rooftop: return "ROOFTOP"

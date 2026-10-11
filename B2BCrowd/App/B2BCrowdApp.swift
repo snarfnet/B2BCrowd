@@ -194,7 +194,7 @@ final class AppModel {
             c.length = 4
             c.playLimit = 25
             c.crowd = .mix
-            c.venue = .tokyoNight
+            c.venue = .smallClub
             c.characters = ["c09", "c02"]
             config = c
             let engine = GameEngine(config: c, player: music.player)
@@ -221,7 +221,7 @@ final class AppModel {
             c.length = args[i + 1] == "result" ? 3 : 20
             c.playLimit = 30
             c.crowd = .mix
-            c.venue = .tokyoNight
+            c.venue = .smallClub
             c.characters = args[i + 1] == "result" ? ["c09", "c02"] : ["r02", "c12"]
             config = c
             let engine = GameEngine(config: c, player: music.player)
@@ -236,7 +236,8 @@ final class AppModel {
 
     private static func loadConfig() -> SessionConfig {
         guard let d = UserDefaults.standard.data(forKey: configKey),
-              let c = try? JSONDecoder().decode(SessionConfig.self, from: d) else { return SessionConfig() }
+              var c = try? JSONDecoder().decode(SessionConfig.self, from: d) else { return SessionConfig() }
+        if !c.venue.isSelectable { c.venue = .smallClub }   // venues that were folded into CLUB
         return c
     }
 
