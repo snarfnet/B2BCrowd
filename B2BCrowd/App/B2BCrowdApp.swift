@@ -167,7 +167,7 @@ final class AppModel {
             c.genreID = "HOUSE"
             c.length = 4
             c.playLimit = 20
-            c.venue = .warehouse
+            c.venue = .shibuyaStreet
             c.autoDJ = [true, true]
             config = c
             start()

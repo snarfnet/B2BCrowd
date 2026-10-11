@@ -128,6 +128,7 @@ final class GameEngine {
 
     func reserve(_ t: Track) {
         if isMirror { sendCommand?(.pick(t)); return }
+        guard phase != .transition, phase != .result else { return }   // the drop already started this track playing
         next = t
         selectedAt = selectionElapsed
         MusicAnalytics.shared.recordSelection(seconds: selectionElapsed, source: t.sourceKind)
