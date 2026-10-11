@@ -45,7 +45,7 @@ final class SoundFX {
         }
         engine.mainMixerNode.outputVolume = 0.8
         for name in ["cheer_small", "cheer_small2", "cheer_big", "whistle", "whistle2", "woo", "woo2",
-                     "applause", "boo", "horn", "amb_low", "amb_high"] {
+                     "applause", "boo", "horn", "amb_low", "amb_high", "ui_tap", "ui_confirm", "ui_back"] {
             if let b = load(name) { files[name] = b }
         }
     }
@@ -102,6 +102,18 @@ final class SoundFX {
         case .horn: shot("horn", volume: 0.6, minGap: 1.0)
         case .tick: synthShot("tick") { t in 1320 }
         case .drop: synthShot("drop") { t in 140 - 90 * t }
+        }
+    }
+
+    // MARK: ボタンの音（観客の声のオン・オフとは別。Stable Audio 3 で作った短い音）
+
+    enum UI { case tap, confirm, back }
+    func ui(_ u: UI) {
+        guard start() else { return }
+        switch u {
+        case .tap: shot("ui_tap", volume: 0.55, minGap: 0.05)
+        case .confirm: shot("ui_confirm", volume: 0.7, minGap: 0.2)
+        case .back: shot("ui_back", volume: 0.55, minGap: 0.05)
         }
     }
 

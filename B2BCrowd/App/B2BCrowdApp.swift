@@ -57,6 +57,7 @@ final class AppModel {
     var autoOpenSearchTab: Int?
 
     func start() {
+        SoundFX.shared.ui(.confirm)
         Self.saveConfig(config)
         if link.role == .guest { return }
         var c = config
@@ -89,6 +90,7 @@ final class AppModel {
     }
 
     func backToTitle() {
+        SoundFX.shared.ui(.back)
         link.stop()
         screen = .title
     }
@@ -280,6 +282,10 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: screenKey)
+        .onChange(of: screenKey, initial: true) { _, k in
+            // title / setup / DJ profiles: the title track; session and result: off (the DJs' songs play there)
+            if k == 0 || k == 1 || k == 4 { TitleMusic.shared.play() } else { TitleMusic.shared.stop() }
+        }
     }
 
     private var screenKey: Int {

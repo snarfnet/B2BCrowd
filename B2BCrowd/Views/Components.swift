@@ -35,6 +35,7 @@ struct NeonButtonStyle: ButtonStyle {
             .foregroundStyle(filled ? Color.black : color)
             .shadow(color: color.opacity(0.6), radius: configuration.isPressed ? 2 : 10)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .onChange(of: configuration.isPressed) { _, down in if down { SoundFX.shared.ui(.tap) } }
     }
 }
 

@@ -182,7 +182,7 @@ struct LobbyView: View {
             case .link: return ("iphone.radiowaves.left.and.right", L.t("iPhone 2台で対戦", "2 iPhones", hans: "两台 iPhone 对战", hant: "兩支 iPhone 對戰"), L.t("近くの iPhone とつなぐ", "Link a nearby iPhone", hans: "连接附近的 iPhone", hant: "連線附近的 iPhone"))
             }
         }()
-        return Button { setOpponent(o) } label: {
+        return Button { SoundFX.shared.ui(.tap); setOpponent(o) } label: {
             HStack(spacing: 10) {
                 Image(systemName: icon).font(.title2).frame(width: 30)
                 VStack(alignment: .leading, spacing: 2) {
@@ -414,6 +414,7 @@ struct LobbyView: View {
                 HStack(spacing: 8) {
                     ForEach(DJCharacter.all) { c in
                         Button {
+                            SoundFX.shared.ui(.tap)
                             if app.config.characters.count != 2 { app.config.characters = ["c09", "c02"] }
                             app.config.characters[dj] = c.id
                         } label: {
@@ -443,6 +444,7 @@ struct LobbyView: View {
     private func modeCard(_ m: GameMode) -> some View {
         let on = app.config.mode == m
         return Button {
+            SoundFX.shared.ui(.tap)
             app.config.mode = m
         } label: {
             HStack(spacing: 8) {
@@ -463,6 +465,7 @@ struct LobbyView: View {
         let own = UIImage(named: "venue_\(v.rawValue).jpg") != nil   // venues with their own crowd video have their own photo
         let img = UIImage(named: own ? "venue_\(v.rawValue).jpg" : "venue_club.jpg")
         return Button {
+            SoundFX.shared.ui(.tap)
             app.config.venue = v
         } label: {
             ZStack(alignment: .bottomLeading) {
