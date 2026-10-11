@@ -159,6 +159,19 @@ enum GameMode: String, CaseIterable, Identifiable, Codable {
     case free, genre, theme, shiritori, secret, timeAttack, survival, challenge
 
     var id: String { rawValue }
+    /// 設定画面での名前
+    var label: String {
+        switch self {
+        case .free: return L.t("フリー B2B", "FREE B2B")
+        case .genre: return L.t("ジャンル縛り", "GENRE BATTLE")
+        case .theme: return L.t("お題バトル", "THEME BATTLE")
+        case .shiritori: return L.t("DJしりとり", "DJ SHIRITORI")
+        case .secret: return L.t("シークレット", "SECRET TRACK")
+        case .timeAttack: return L.t("タイムアタック", "TIME ATTACK")
+        case .survival: return L.t("サバイバル", "SURVIVAL")
+        case .challenge: return L.t("100%チャレンジ", "100% CHALLENGE")
+        }
+    }
 
     var title: String {
         switch self {
@@ -242,6 +255,13 @@ enum Themes {
 enum CrowdMode: String, CaseIterable, Identifiable, Codable {
     case ai, player, mix
     var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .ai: return L.t("AI 観客", "AI")
+        case .player: return L.t("周りの人", "PLAYER")
+        case .mix: return L.t("両方", "MIX")
+        }
+    }
     var title: String {
         switch self {
         case .ai: return "AI"
@@ -256,6 +276,21 @@ enum CrowdMode: String, CaseIterable, Identifiable, Codable {
 enum Venue: String, CaseIterable, Identifiable, Codable {
     case smallClub, underground, warehouse, rooftop, beach, tokyoNight, cyberClub, megaFestival, spaceClub, forestRave, recordShop
     var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .smallClub: return L.t("小さなクラブ", "SMALL CLUB")
+        case .underground: return L.t("地下クラブ", "UNDERGROUND")
+        case .warehouse: return L.t("倉庫レイヴ", "WAREHOUSE")
+        case .rooftop: return L.t("屋上", "ROOFTOP")
+        case .beach: return L.t("ビーチ", "BEACH")
+        case .tokyoNight: return L.t("東京の夜", "TOKYO NIGHT")
+        case .cyberClub: return L.t("サイバークラブ", "CYBER CLUB")
+        case .megaFestival: return L.t("巨大フェス", "MEGA FESTIVAL")
+        case .spaceClub: return L.t("宇宙クラブ", "SPACE CLUB")
+        case .forestRave: return L.t("森のレイヴ", "FOREST RAVE")
+        case .recordShop: return L.t("レコード屋", "RECORD SHOP")
+        }
+    }
 
     var title: String {
         switch self {
@@ -315,6 +350,17 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
 enum VJMode: String, CaseIterable, Identifiable, Codable {
     case auto, tunnel, kaleido, artwork, plasma, typo, off
     var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .auto: return L.t("おまかせ", "AUTO")
+        case .tunnel: return L.t("トンネル", "TUNNEL")
+        case .kaleido: return L.t("万華鏡", "KALEIDO")
+        case .artwork: return L.t("ジャケット", "ARTWORK")
+        case .plasma: return L.t("プラズマ", "PLASMA")
+        case .typo: return L.t("文字", "TYPO")
+        case .off: return L.t("なし", "OFF")
+        }
+    }
     var title: String {
         switch self {
         case .auto: return "AUTO"

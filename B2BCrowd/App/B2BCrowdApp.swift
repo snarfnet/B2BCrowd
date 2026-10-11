@@ -246,6 +246,13 @@ final class AppModel {
 }
 
 enum SplitMode: String, CaseIterable, Identifiable {
+    var label: String {
+        switch self {
+        case .auto: return L.t("自動", "AUTO")
+        case .on: return L.t("分ける", "ON")
+        case .off: return L.t("分けない", "OFF")
+        }
+    }
     case auto, on, off
     var id: String { rawValue }
     var title: String {

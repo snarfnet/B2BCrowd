@@ -52,7 +52,7 @@ struct MusicStatusCard: View {
     var body: some View {
         @Bindable var music = music
         VStack(alignment: .leading, spacing: 10) {
-            Text("MUSIC SOURCE").font(.system(size: 11, weight: .heavy, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
+            Text(L.t("音楽", "MUSIC SOURCE")).font(.system(size: 11, weight: .heavy, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
             Picker("", selection: $music.source) {
                 ForEach(MusicSourceKind.allCases) { Text($0.title).tag($0) }
             }

@@ -14,7 +14,7 @@ struct LobbyView: View {
             HStack {
                 Button { app.backToTitle() } label: { Image(systemName: "chevron.left").font(.title3.bold()) }
                 Spacer()
-                LEDText(text: "SESSION SETUP", size: 18, color: .cyan)
+                LEDText(text: L.t("セッションの準備", "SESSION SETUP"), size: 18, color: .cyan)
                 Spacer()
                 Image(systemName: "chevron.left").opacity(0)
             }
@@ -56,7 +56,7 @@ struct LobbyView: View {
                         link.host(name: app.config.djNames[0], character: app.config.characters.first ?? "c09")
                     } label: {
                         VStack(spacing: 2) {
-                            Text("HOST").font(.system(size: 15, weight: .black, design: .monospaced))
+                            Text(L.t("ホスト", "HOST")).font(.system(size: 15, weight: .black, design: .monospaced))
                             Text(L.t("音を鳴らす側・DJ A", "Plays music · DJ A")).font(.system(size: 10, weight: .bold))
                         }
                         .frame(maxWidth: .infinity)
@@ -66,7 +66,7 @@ struct LobbyView: View {
                         link.join(name: app.config.djNames[1], character: app.config.characters.count == 2 ? app.config.characters[1] : "c02")
                     } label: {
                         VStack(spacing: 2) {
-                            Text("JOIN").font(.system(size: 15, weight: .black, design: .monospaced))
+                            Text(L.t("参加", "JOIN")).font(.system(size: 15, weight: .black, design: .monospaced))
                             Text(L.t("相手に参加・DJ B", "Join a host · DJ B")).font(.system(size: 10, weight: .bold))
                         }
                         .frame(maxWidth: .infinity)
@@ -82,7 +82,7 @@ struct LobbyView: View {
                             .font(.system(size: 14, weight: .bold))
                     } else {
                         ProgressView()
-                        Text(L.t("相手の iPhone で「JOIN」を押してもらってください", "Ask your partner to tap JOIN on their iPhone"))
+                        Text(L.t("相手の iPhone で「参加」を押してもらってください", "Ask your partner to tap JOIN on their iPhone"))
                             .font(.system(size: 13, weight: .bold))
                     }
                     Spacer()
@@ -127,7 +127,7 @@ struct LobbyView: View {
                 Text(L.t("\(link.partnerName ?? "ホスト") につながりました", "Linked with \(link.partnerName ?? "host")"))
                     .font(.system(size: 15, weight: .bold))
             }
-            Text(L.t("ホストが START を押すと始まります。音はホストの iPhone から鳴ります。",
+            Text(L.t("ホストがスタートを押すと始まります。音はホストの iPhone から鳴ります。",
                      "The session starts when the host taps START. Music plays from the host's iPhone."))
                 .font(.caption).foregroundStyle(.white.opacity(0.7))
         } else if link.hosts.isEmpty {
@@ -135,7 +135,7 @@ struct LobbyView: View {
                 ProgressView()
                 Text(L.t("近くのホストを探しています…", "Looking for a nearby host…")).font(.system(size: 13, weight: .bold))
             }
-            Text(L.t("相手の iPhone で SESSION SETUP の「HOST」を押してもらってください。", "Ask your partner to tap HOST in SESSION SETUP."))
+            Text(L.t("相手の iPhone で SESSION SETUP の「ホスト」を押してもらってください。", "Ask your partner to tap HOST in SESSION SETUP."))
                 .font(.caption).foregroundStyle(.white.opacity(0.7))
         } else {
             ForEach(link.hosts) { h in
@@ -263,26 +263,26 @@ struct LobbyView: View {
                         VStack(alignment: .leading, spacing: 22) {
                             section(L.t("曲数", "SESSION LENGTH")) {
                                 Picker("", selection: $app.config.length) {
-                                    Text("5").tag(5); Text("10").tag(10); Text("20").tag(20); Text("ENDLESS").tag(0)
+                                    Text("5").tag(5); Text("10").tag(10); Text("20").tag(20); Text(L.t("無制限", "ENDLESS")).tag(0)
                                 }
                                 .pickerStyle(.segmented)
                             }
                             section(L.t("1曲の再生時間", "PLAY TIME PER TRACK")) {
                                 Picker("", selection: $app.config.playLimit) {
-                                    Text("30s").tag(30); Text("60s").tag(60); Text("90s").tag(90); Text("FULL").tag(0)
+                                    Text(L.t("30秒", "30s")).tag(30); Text(L.t("60秒", "60s")).tag(60); Text(L.t("90秒", "90s")).tag(90); Text(L.t("最後まで", "FULL")).tag(0)
                                 }
                                 .pickerStyle(.segmented)
                                 Text(L.t("時間が来たら次の曲へ切り替わります（曲同士を重ねるミックスはしません）。", "When time is up the next track starts. Tracks are never mixed together."))
                                     .font(.caption).foregroundStyle(.white.opacity(0.6))
                             }
-                            section("SECRET TRACK") {
+                            section(L.t("シークレット", "SECRET TRACK")) {
                                 Toggle(L.t("次の曲を相手に隠す", "Hide next track from partner"), isOn: $app.config.secret)
                                     .disabled(app.config.mode == .secret)
                                     .tint(.purple)
                             }
                             section(L.t("観客", "CROWD")) {
                                 Picker("", selection: $app.config.crowd) {
-                                    ForEach(CrowdMode.allCases) { Text($0.title).tag($0) }
+                                    ForEach(CrowdMode.allCases) { Text($0.label).tag($0) }
                                 }
                                 .pickerStyle(.segmented)
                                 Text(crowdHelp).font(.caption).foregroundStyle(.white.opacity(0.6))
@@ -290,11 +290,11 @@ struct LobbyView: View {
                                     .tint(.pink)
                                     .onChange(of: crowdSound) { _, v in SoundFX.shared.enabled = v }
                             }
-                            section("VJ") {
+                            section(L.t("VJ（画面の映像）", "VJ")) {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
                                         ForEach(VJMode.allCases) { m in
-                                            Button(m.title) { app.config.vjMode = m }
+                                            Button(m.label) { app.config.vjMode = m }
                                                 .font(.system(size: 12, weight: .heavy, design: .monospaced))
                                                 .padding(.horizontal, 12).padding(.vertical, 7)
                                                 .background(Capsule().fill(app.config.vjMode == m ? Color.purple.opacity(0.45) : .white.opacity(0.08)))
@@ -310,7 +310,7 @@ struct LobbyView: View {
                             if link.role == .none {
                                 section(L.t("画面を2分割（iPhone Duo）", "SPLIT SCREEN (iPhone Duo)")) {
                                     Picker("", selection: $app.splitMode) {
-                                        ForEach(SplitMode.allCases) { Text($0.title).tag($0) }
+                                        ForEach(SplitMode.allCases) { Text($0.label).tag($0) }
                                     }
                                     .pickerStyle(.segmented)
                                     Text(L.t("iPhone Duo を開くと画面が左右に分かれ、2人がそれぞれの半分で同時に選曲できます。AUTO は広い画面のときだけ分けます。",
@@ -333,7 +333,7 @@ struct LobbyView: View {
             Button {
                 app.start()
             } label: {
-                Label(music.isReady ? "START · \(music.sourceLabel)" : L.t("Apple Music に接続するか AUDIUS / DEMO を選ぶ", "Connect Apple Music, or pick AUDIUS / DEMO"),
+                Label(music.isReady ? L.t("スタート · \(music.sourceLabel)", "START · \(music.sourceLabel)") : L.t("Apple Music に接続するか AUDIUS / DEMO を選ぶ", "Connect Apple Music, or pick AUDIUS / DEMO"),
                       systemImage: "play.fill")
             }
             .buttonStyle(NeonButtonStyle(color: .pink))
@@ -361,7 +361,7 @@ struct LobbyView: View {
             chips(Themes.all, selected: app.config.theme) { app.config.theme = $0 }
         case .timeAttack:
             Picker("", selection: $app.config.timeLimit) {
-                Text("60s").tag(60); Text("45s").tag(45); Text("30s").tag(30); Text("15s").tag(15)
+                Text(L.t("60秒", "60s")).tag(60); Text(L.t("45秒", "45s")).tag(45); Text(L.t("30秒", "30s")).tag(30); Text(L.t("15秒", "15s")).tag(15)
             }
             .pickerStyle(.segmented)
         default:
@@ -385,7 +385,7 @@ struct LobbyView: View {
                     .background(RoundedRectangle(cornerRadius: 10).fill(Color.cyan.opacity(0.12)))
                 Image(systemName: "iphone.radiowaves.left.and.right").foregroundStyle(.cyan)
             } else {
-                TextField("DJ NAME", text: $app.config.djNames[i])
+                TextField(L.t("DJの名前", "DJ NAME"), text: $app.config.djNames[i])
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .padding(10)
@@ -447,7 +447,7 @@ struct LobbyView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: m.symbol)
-                Text(m.title).font(.system(size: 12, weight: .heavy, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(m.label).font(.system(size: 12, weight: .heavy, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 0)
             }
             .padding(12)
@@ -475,7 +475,7 @@ struct LobbyView: View {
                 .overlay(own ? AnyView(Color.clear) : AnyView(LinearGradient(colors: [v.palette.2.opacity(0.45), v.palette.0.opacity(0.55)], startPoint: .top, endPoint: .bottom).blendMode(.multiply)))
                 LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(v.title).font(.system(size: 12, weight: .heavy, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(v.label).font(.system(size: 13, weight: .heavy)).lineLimit(1).minimumScaleFactor(0.7)
                     if let sub = v.subtitle { Text(sub).font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.8)) }
                 }
                 .padding(7)
@@ -522,7 +522,7 @@ struct LinkHowTo: View {
     private var items: [(String, String)] {
         [
             ("iphone.gen3", L.t("2台ともこのアプリを入れてください。", "Both iPhones need this app installed.")),
-            ("hand.tap", L.t("1台目は「HOST」、2台目は「JOIN」を押して、出てきた相手の名前をタップするとつながります。", "Tap HOST on one iPhone and JOIN on the other, then tap the host's name.")),
+            ("hand.tap", L.t("1台目は「ホスト」、2台目は「参加」を押して、出てきた相手の名前をタップするとつながります。", "Tap HOST on one iPhone and JOIN on the other, then tap the host's name.")),
             ("antenna.radiowaves.left.and.right", L.t("近くにいるときだけ使えます。Wi‑Fi か Bluetooth をオンに。初めてのときに出る「ローカルネットワーク」の確認は「許可」を押してください。", "Works only nearby. Turn on Wi‑Fi or Bluetooth, and tap Allow when asked about the local network.")),
             ("speaker.wave.2", L.t("音はホストの iPhone からだけ鳴ります。会場・観客・DJ の画面は2台とも同じものが映ります。", "Music plays only from the host. Both iPhones show the same venue, crowd and DJs.")),
             ("music.note", L.t("ホストが Apple Music のときは、JOIN 側の iPhone でも曲を探すために Apple Music の許可が必要です。AUDIUS か DEMO なら Apple Music は無くても遊べます。", "If the host uses Apple Music, the JOIN side also needs Apple Music access to search. With AUDIUS or DEMO, no Apple Music is needed.")),
