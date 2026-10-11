@@ -190,6 +190,13 @@ struct LobbyView: View {
                         }
                     }
 
+                    // 会場（ステージ）：全部が一度に見えるよう 2 列のカード。タップで切り替え
+                    section(L.t("会場（ステージ）", "VENUE")) {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                            ForEach(Venue.allCases) { v in venueCard(v) }
+                        }
+                    }
+
                     section("MODE") {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                             ForEach(GameMode.allCases) { m in modeCard(m) }
@@ -250,14 +257,6 @@ struct LobbyView: View {
                         Text(L.t("LED 画面の映像。曲のジャケットとタイトル、盛り上がりで変わります（音は解析しません）。",
                                  "Visuals on the LED screens, driven by artwork, title and crowd energy (no audio analysis)."))
                             .font(.caption).foregroundStyle(.white.opacity(0.6))
-                    }
-
-                    section("VENUE") {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(Venue.allCases) { v in venueCard(v) }
-                            }
-                        }
                     }
 
                     MusicStatusCard()
@@ -411,18 +410,35 @@ struct LobbyView: View {
 
     private func venueCard(_ v: Venue) -> some View {
         let on = app.config.venue == v
+        // 森・レコード屋は専用の観客動画、ほかのクラブは共通の観客に会場の色
+        let own = v == .forestRave || v == .recordShop
+        let img = UIImage(named: own ? "venue_\(v.rawValue).jpg" : "venue_club.jpg")
         return Button {
             app.config.venue = v
         } label: {
-            VStack(spacing: 6) {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(LinearGradient(colors: [v.palette.0, v.palette.1], startPoint: .top, endPoint: .bottom))
-                    .overlay(Circle().fill(v.palette.2.opacity(0.6)).frame(width: 18).blur(radius: 4))
-                    .frame(width: 96, height: 64)
-                Text(v.title).font(.system(size: 10, weight: .heavy, design: .monospaced))
+            ZStack(alignment: .bottomLeading) {
+                Group {
+                    if let img { Image(uiImage: img).resizable().scaledToFill() } else { Color.black }
+                }
+                .frame(height: 78)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .overlay(own ? AnyView(Color.clear) : AnyView(LinearGradient(colors: [v.palette.2.opacity(0.45), v.palette.0.opacity(0.55)], startPoint: .top, endPoint: .bottom).blendMode(.multiply)))
+                LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(v.title).font(.system(size: 12, weight: .heavy, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
+                    if let sub = v.subtitle { Text(sub).font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.8)) }
+                }
+                .padding(7)
+                if on {
+                    Image(systemName: "checkmark.circle.fill").font(.title3).foregroundStyle(.cyan)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(6)
+                }
             }
-            .padding(6)
-            .background(RoundedRectangle(cornerRadius: 12).stroke(on ? .cyan : .clear, lineWidth: 2))
+            .frame(height: 78)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(on ? Color.cyan : Color.white.opacity(0.12), lineWidth: on ? 3 : 1))
+            .foregroundStyle(.white)
         }
         .buttonStyle(.plain)
     }

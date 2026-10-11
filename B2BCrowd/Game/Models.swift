@@ -273,6 +273,15 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// 会場カードの一言（専用の観客がいる会場）
+    var subtitle: String? {
+        switch self {
+        case .forestRave: return L.t("森の野外レイヴ", "Outdoor forest rave")
+        case .recordShop: return L.t("レコード屋の店内", "Inside a record shop")
+        default: return nil
+        }
+    }
+
     // 背景上・背景下・照明色
     var palette: (Color, Color, Color) {
         switch self {

@@ -429,7 +429,8 @@ struct SessionView: View {
     }
 }
 
-// NEXT TRACK! 切り替え演出。SECRET TRACK もここで初めて見える。
+// NEXT TRACK! 切り替え演出。テレビの生中継のテロップのように、画面の真ん中あたりに帯で出す（フロアは見えたまま）。
+// SECRET TRACK もここで初めて見える。
 struct NextTrackReveal: View {
     let track: Track?
     let dj: String
@@ -437,32 +438,54 @@ struct NextTrackReveal: View {
     @State private var shown = false
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.9).ignoresSafeArea()
-            VStack(spacing: 18) {
-                LEDText(text: "NEXT TRACK!", size: 40, color: tint)
-                    .scaleEffect(shown ? 1 : 2.2)
-                    .opacity(shown ? 1 : 0)
-                ArtworkView(track: track, size: .large)
-                    .frame(width: 230, height: 230)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .shadow(color: tint.opacity(0.8), radius: 30)
-                    .scaleEffect(shown ? 1 : 0.3)
-                    .rotation3DEffect(.degrees(shown ? 0 : 180), axis: (x: 0, y: 1, z: 0))
-                VStack(spacing: 4) {
-                    Text(track?.title ?? "").font(.system(size: 22, weight: .heavy)).multilineTextAlignment(.center)
-                    Text(track?.artist ?? "").font(.system(size: 16)).foregroundStyle(.white.opacity(0.75))
-                    if track?.sourceKind == .audius {
-                        Text("Source: Audius").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(.purple)
+        VStack {
+            Spacer()
+            HStack(spacing: 0) {
+                // 左の色帯（LIVE のラベル）
+                VStack(spacing: 2) {
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.red).frame(width: 7, height: 7)
+                        Text("LIVE").font(.system(size: 11, weight: .black, design: .monospaced))
                     }
-                    LEDText(text: "by \(dj)", size: 16, color: tint).padding(.top, 6)
+                    Text("NEXT").font(.system(size: 10, weight: .heavy, design: .monospaced)).opacity(0.85)
                 }
-                .opacity(shown ? 1 : 0)
+                .foregroundStyle(.white)
+                .frame(width: 58)
+                .frame(maxHeight: .infinity)
+                .background(tint)
+                ArtworkView(track: track, size: .medium)
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .padding(.leading, 10)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(track?.title ?? "")
+                        .font(.system(size: 17, weight: .heavy)).lineLimit(1)
+                    Text(track?.artist ?? "")
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text("by \(dj)").font(.system(size: 11, weight: .heavy, design: .monospaced)).foregroundStyle(tint)
+                        if track?.sourceKind == .audius {
+                            Text("Source: Audius").font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(.purple)
+                        }
+                    }
+                }
+                .padding(.horizontal, 10)
+                Spacer(minLength: 0)
             }
-            .padding()
+            .frame(height: 70)
+            .background(
+                LinearGradient(colors: [Color.black.opacity(0.88), Color.black.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
+            )
+            .overlay(Rectangle().fill(tint).frame(height: 2), alignment: .bottom)
+            .padding(.horizontal, 12)
+            .offset(x: shown ? 0 : -500)
+            .opacity(shown ? 1 : 0)
+            Spacer()
+            Spacer()
         }
+        .allowsHitTesting(false)
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.65)) { shown = true }
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { shown = true }
         }
     }
 }
