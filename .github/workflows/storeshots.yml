@@ -1,0 +1,83 @@
+name: Store screenshots
+
+# App Store 用のスクショと紹介動画を、6.9 インチの iPhone シミュレーター（1320x2868）で実際に撮る。
+# 言語ごと（ja / en / zh-Hans / zh-Hant）。成果物 store/<lang>/NN_*.png と preview_<lang>.mp4（886x1920, 30fps, 25 秒）。
+on:
+  workflow_dispatch:
+
+jobs:
+  shots:
+    runs-on: macos-latest
+    timeout-minutes: 150
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Select Xcode
+      run: |
+        XCODE_APP=$(ls /Applications/ | grep "^Xcode_" | sort -V | tail -1)
+        sudo xcode-select -s "/Applications/$XCODE_APP"
+        xcodebuild -version
+
+    - name: Install tools
+      run: brew install xcodegen ffmpeg
+
+    - name: Write Audius API key
+      env:
+        AUDIUS_API_KEY: ${{ secrets.AUDIUS_API_KEY }}
+      run: |
+        if [ -n "$AUDIUS_API_KEY" ]; then echo "AUDIUS_API_KEY = $AUDIUS_API_KEY" > Config/Secrets.xcconfig; fi
+
+    - name: Build for Simulator
+      run: |
+        set -o pipefail
+        xcodegen generate
+        xcodebuild build -scheme B2BCrowd -configuration Release -sdk iphonesimulator \
+          -destination "generic/platform=iOS Simulator" -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO 2>&1 \
+          | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+        grep -q "BUILD SUCCEEDED" build.log
+
+    - name: Capture
+      run: |
+        set -x
+        UDID=$(xcrun simctl list devices available -j | python3 -c "
+        import json,sys
+        d=json.load(sys.stdin)['devices']
+        c=[x for k,v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone') and 'Pro Max' in x['name']]
+        print(c[-1]['udid'])")
+        xcrun simctl boot "$UDID"; xcrun simctl bootstatus "$UDID" -b
+        xcrun simctl status_bar "$UDID" override --time 9:41 --dataNetwork wifi --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+        APP=build/sim/Build/Products/Release-iphonesimulator/B2BCrowd.app
+        BID=com.tokyonasu.B2BCrowd
+        mkdir -p store
+        for L in ja en zh-Hans zh-Hant; do
+          O=store/$L; mkdir -p $O
+          fresh() { xcrun simctl terminate "$UDID" $BID || true; xcrun simctl uninstall "$UDID" $BID || true; xcrun simctl install "$UDID" "$APP"; }
+          run() { xcrun simctl terminate "$UDID" $BID || true; xcrun simctl launch "$UDID" $BID -AppleLanguages "($L)" -AppleLocale "$L" -shot "$@"; }
+          shot() { xcrun simctl io "$UDID" screenshot "$O/$1.png"; }
+          fresh
+          # 紹介動画：セッションの最初から（1曲目の選曲→テロップ→盛り上がり）
+          xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$O/raw.mp4" & REC=$!; sleep 1
+          run session; sleep 6; shot 02_banner
+          sleep 26; kill -INT $REC; wait $REC || true
+          sleep 20; shot 01_floor_hot
+          run session -boothcam; sleep 16; shot 05_booth
+          run auto; sleep 40; shot 03_shibuya
+          run lobby; sleep 6; shot 04_setup
+          run title; sleep 14; shot 06_title
+          run result; sleep 125; shot 07_result
+          # 2分割（iPhone Duo）は最後（設定が残るので）
+          run split; sleep 30; shot 08_duo_split
+          # 動画：先頭 1 秒を落として 25 秒、886x1920、30fps、無音のステレオ音声トラック付き
+          ffmpeg -y -ss 1 -t 25 -i "$O/raw.mp4" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+            -vf "scale=886:1920:force_original_aspect_ratio=decrease,pad=886:1920:(ow-iw)/2:(oh-ih)/2:black,fps=30,format=yuv420p" \
+            -c:v libx264 -profile:v high -level 4.0 -b:v 9M -maxrate 10M -bufsize 20M -c:a aac -b:a 128k -shortest -movflags +faststart \
+            "store/preview_$L.mp4"
+          rm -f "$O/raw.mp4"
+        done
+        ls -R store
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: store
+        path: store/
