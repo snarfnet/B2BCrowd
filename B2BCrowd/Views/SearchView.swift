@@ -50,13 +50,13 @@ struct SearchView: View {
             }
             .background(Color.black)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
-                        prompt: isAudius ? "Search Audius" : L.t("曲名・アーティスト", "Song or artist"))
+                        prompt: isAudius ? "Search Audius" : L.t("曲名・アーティスト", "Song or artist", hans: "歌名或艺人", hant: "歌名或藝人"))
             .navigationTitle(embeddedDJ.map { game.name($0) } ?? "NEXT TRACK · \(game.name(game.selector))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if embeddedDJ == nil {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(L.t("閉じる", "Close")) { dismiss() }
+                        Button(L.t("閉じる", "Close", hans: "关闭", hant: "關閉")) { dismiss() }
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -114,7 +114,7 @@ struct SearchView: View {
             case .genre: return "GENRE: \(c.genre.id)"
             case .theme: return "THEME: \(c.theme)"
             case .shiritori:
-                if let cur = game.current { return L.t("「\(cur.title)」から連想する曲", "Link from “\(cur.title)”") }
+                if let cur = game.current { return L.t("「\(cur.title)」から連想する曲", "Link from “\(cur.title)”", hans: "由“\(cur.title)”联想的歌", hant: "由「\(cur.title)」聯想的歌") }
                 return nil
             default: return nil
             }
@@ -138,8 +138,8 @@ struct SearchView: View {
                     Text("TRENDING").tag(1)
                     Text("RECENT").tag(2)
                 } else {
-                    Text(L.t("カタログ", "Catalog")).tag(0)
-                    Text(L.t("ライブラリ", "Library")).tag(1)
+                    Text(L.t("カタログ", "Catalog", hans: "曲库", hant: "曲庫")).tag(0)
+                    Text(L.t("ライブラリ", "Library", hans: "资料库", hant: "資料庫")).tag(1)
                 }
             }
             .pickerStyle(.segmented)
@@ -179,7 +179,7 @@ struct SearchView: View {
                     if game.config.mode == .genre {
                         game.config.genre.matches(t) ? tag("✓ \(game.config.genre.id)", .green) : tag("✗ \(game.config.genre.id)", .red)
                     }
-                    if game.wasPlayed(t) { tag(L.t("再生済み", "PLAYED"), .orange) }
+                    if game.wasPlayed(t) { tag(L.t("再生済み", "PLAYED", hans: "已播放", hant: "已播放"), .orange) }
                     if let a = t.audius, a.licenseStatus == .unknown { tag("LICENSE ?", .gray) }
                     if let reason { tag(reason.label, .red) }
                 }
@@ -212,7 +212,7 @@ struct SearchView: View {
     private var attribution: some View {
         HStack(spacing: 6) {
             Image(systemName: "waveform")
-            Text(L.t("音源・メタデータ提供: Audius（アーティストの公式アップロード）", "Music & metadata: Audius (uploaded by the artists)"))
+            Text(L.t("音源・メタデータ提供: Audius（アーティストの公式アップロード）", "Music & metadata: Audius (uploaded by the artists)", hans: "音源与元数据提供：Audius（艺人官方上传）", hant: "音源與詮釋資料提供：Audius（藝人官方上傳）"))
             Spacer()
             Link("audius.co", destination: URL(string: "https://audius.co")!)
         }
@@ -240,9 +240,9 @@ struct SearchView: View {
             defer { loading = false }
             do {
                 results = try await music.search(q)
-                if results.isEmpty, !q.isEmpty { error = L.t("見つかりませんでした", "No results") }
+                if results.isEmpty, !q.isEmpty { error = L.t("見つかりませんでした", "No results", hans: "未找到结果", hant: "找不到結果") }
             } catch {
-                if !Task.isCancelled { self.error = L.t("検索できませんでした（通信を確認してください）", "Search failed. Check your connection.") }
+                if !Task.isCancelled { self.error = L.t("検索できませんでした（通信を確認してください）", "Search failed. Check your connection.", hans: "搜索失败（请检查网络连接）", hant: "搜尋失敗（請檢查網路連線）") }
             }
         } else {
             loading = true
@@ -252,7 +252,7 @@ struct SearchView: View {
                 let q = query.lowercased()
                 results = q.isEmpty ? all : all.filter { $0.title.lowercased().contains(q) || $0.artist.lowercased().contains(q) }
             } catch {
-                self.error = L.t("ライブラリを読めませんでした", "Couldn't read your library")
+                self.error = L.t("ライブラリを読めませんでした", "Couldn't read your library", hans: "无法读取资料库", hant: "無法讀取資料庫")
             }
         }
     }
@@ -291,7 +291,7 @@ struct SearchView: View {
             return
         } catch {
             if !Task.isCancelled {
-                self.error = (error as? AudiusError)?.errorDescription ?? L.t("Audius を読めませんでした", "Couldn't reach Audius")
+                self.error = (error as? AudiusError)?.errorDescription ?? L.t("Audius を読めませんでした", "Couldn't reach Audius", hans: "无法读取 Audius", hant: "無法讀取 Audius")
             }
             return
         }
@@ -303,9 +303,9 @@ struct SearchView: View {
         results += page.filter { !known.contains($0.id) }
         canLoadMore = source != 2 && page.count >= pageSize
         if results.isEmpty, source != 2 || !q.isEmpty {
-            error = L.t("見つかりませんでした", "No results")
+            error = L.t("見つかりませんでした", "No results", hans: "未找到结果", hant: "找不到結果")
         } else if results.isEmpty {
-            error = L.t("まだ Audius から選んだ曲はありません", "No Audius picks yet")
+            error = L.t("まだ Audius から選んだ曲はありません", "No Audius picks yet", hans: "还没有从 Audius 选过歌", hant: "還沒有從 Audius 選過歌")
         }
     }
 

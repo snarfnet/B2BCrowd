@@ -1,0 +1,1184 @@
+[
+ {
+  "ja": "自動",
+  "en": "AUTO",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "分ける",
+  "en": "ON",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "分けない",
+  "en": "OFF",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "繋がった",
+  "en": "LINKED",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "テーマ一致",
+  "en": "THEME MATCH",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "テーマ違反",
+  "en": "OFF THEME",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "相手の接続が切れました。この iPhone で続けます",
+  "en": "Partner disconnected. Carry on with this iPhone.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "AUTO：候補の曲が見つかりません",
+  "en": "AUTO: no track found",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "中断されました。再開をタップ",
+  "en": "Interrupted. Tap resume.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "この曲は再生できません。選び直してください",
+  "en": "This track can't play. Pick another.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "同じ曲",
+  "en": "REPEAT",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ジャンル違い",
+  "en": "OFF GENRE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "同じアーティスト",
+  "en": "SAME ARTIST",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "観客高評価",
+  "en": "CROWD LOVES IT",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "観客が冷めた",
+  "en": "CROWD COOLING",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "観客ノリノリ",
+  "en": "CROWD GROOVING",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "フリー B2B",
+  "en": "FREE B2B",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ジャンル縛り",
+  "en": "GENRE BATTLE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "お題バトル",
+  "en": "THEME BATTLE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "DJしりとり",
+  "en": "DJ SHIRITORI",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "シークレット",
+  "en": "SECRET TRACK",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "タイムアタック",
+  "en": "TIME ATTACK",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "サバイバル",
+  "en": "SURVIVAL",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "100%チャレンジ",
+  "en": "100% CHALLENGE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "縛りなし。好きな曲で返し合う。",
+  "en": "No rules. Answer each other with any track.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "決めたジャンルの曲だけで勝負。Apple Music のジャンル情報で判定。",
+  "en": "Stay inside one genre. Judged by Apple Music genre data.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "お題に合う曲で返す。合ってるかは相手DJが判定。",
+  "en": "Pick tracks that fit the theme. Your partner judges.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "前の曲から連想した曲で返す。繋がりは相手DJが判定。",
+  "en": "Answer with a track linked to the last one. Your partner judges.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "次の曲は切り替わるまで相手に秘密。",
+  "en": "Your next track stays hidden until it drops.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "制限時間内に次の曲を決める。",
+  "en": "Lock in your next track before the timer runs out.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ENERGY が 0 になったらフロアが空っぽ。GAME OVER。",
+  "en": "If ENERGY hits 0, the floor empties. Game over.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "選曲だけで ENERGY 100 を目指す。",
+  "en": "Push the floor to 100 with selection alone.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "AI 観客",
+  "en": "AI",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "周りの人",
+  "en": "PLAYER",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "両方",
+  "en": "MIX",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "小さなクラブ",
+  "en": "SMALL CLUB",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "地下クラブ",
+  "en": "UNDERGROUND",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "倉庫レイヴ",
+  "en": "WAREHOUSE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "屋上",
+  "en": "ROOFTOP",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ビーチ",
+  "en": "BEACH",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "東京の夜",
+  "en": "TOKYO NIGHT",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "サイバークラブ",
+  "en": "CYBER CLUB",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "巨大フェス",
+  "en": "MEGA FESTIVAL",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "宇宙クラブ",
+  "en": "SPACE CLUB",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "森のレイヴ",
+  "en": "FOREST RAVE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "レコード屋",
+  "en": "RECORD SHOP",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "森の野外レイヴ",
+  "en": "Outdoor forest rave",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "レコード屋の店内",
+  "en": "Inside a record shop",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "おまかせ",
+  "en": "AUTO",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "トンネル",
+  "en": "TUNNEL",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "万華鏡",
+  "en": "KALEIDO",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ジャケット",
+  "en": "ARTWORK",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "プラズマ",
+  "en": "PLASMA",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "文字",
+  "en": "TYPO",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "なし",
+  "en": "OFF",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "接続が切れました",
+  "en": "Connection lost",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "つながりませんでした。もう一度試してください",
+  "en": "Couldn't connect. Try again.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "この曲はこちらの Apple Music で見つかりません",
+  "en": "This track isn't in this Apple Music storefront",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ストリーム不可",
+  "en": "NOT STREAMABLE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "限定公開",
+  "en": "GATED",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "アクセス制限",
+  "en": "RESTRICTED",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "他アプリ専用",
+  "en": "APP-RESTRICTED",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "公開終了",
+  "en": "UNAVAILABLE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ライセンス対象外",
+  "en": "LICENSE FILTERED",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "通信できませんでした。接続を確認してください",
+  "en": "Network error. Check your connection.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Audius の応答エラー（\\(code)）",
+  "en": "Audius API error (\\(code))",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "リクエストが多すぎます。少し待ってください",
+  "en": "Too many requests. Wait a moment.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Audius の認証に失敗しました（API キーを確認）",
+  "en": "Audius authentication failed (check the API key).",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "この曲は現在 B2B で再生できません（\\(r.label)）",
+  "en": "This track can't play in B2B right now (\\(r.label)).",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ストリーミングを開始できませんでした。別の曲を選んでください",
+  "en": "Couldn't start the stream. Pick another track.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "この地域では再生できない曲です",
+  "en": "This track isn't available in your region.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "この曲はアクセスが制限されています",
+  "en": "Access to this track is restricted.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Audius の応答を読めませんでした",
+  "en": "Couldn't read the Audius response.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "初B2B",
+  "en": "First B2B",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "生還者（SURVIVAL完走）",
+  "en": "Survivor",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "早撃ち（TIME ATTACK完走）",
+  "en": "Quick Hands",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "10セッション",
+  "en": "10 Sessions",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "セッションの準備",
+  "en": "SESSION SETUP",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "近くの iPhone とつないで、それぞれの iPhone で選曲。音はホストの iPhone から鳴ります（Wi‑Fi か Bluetooth をオン）。",
+  "en": "Link with a nearby iPhone and pick tracks on your own phone. Music plays from the host (turn on Wi‑Fi or Bluetooth).",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ホスト",
+  "en": "HOST",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "音を鳴らす側・DJ A",
+  "en": "Plays music · DJ A",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "参加",
+  "en": "JOIN",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "相手に参加・DJ B",
+  "en": "Join a host · DJ B",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "接続中：\\(link.partnerName ?? \"…\")（DJ B）",
+  "en": "Linked: \\(link.partnerName ?? \"…\") (DJ B)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "相手の iPhone で「参加」を押してもらってください",
+  "en": "Ask your partner to tap JOIN on their iPhone",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "やめる",
+  "en": "Stop",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "あなた（DJ B）",
+  "en": "YOU (DJ B)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ホストにつなぐ",
+  "en": "CONNECT TO HOST",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "2台対戦をやめる",
+  "en": "Leave versus",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(link.partnerName ?? \"ホスト\") につながりました",
+  "en": "Linked with \\(link.partnerName ?? \"host\")",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ホストがスタートを押すと始まります。音はホストの iPhone から鳴ります。",
+  "en": "The session starts when the host taps START. Music plays from the host's iPhone.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "近くのホストを探しています…",
+  "en": "Looking for a nearby host…",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "相手の iPhone で SESSION SETUP の「ホスト」を押してもらってください。",
+  "en": "Ask your partner to tap HOST in SESSION SETUP.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "つなぐ",
+  "en": "Connect",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ふたりで交代",
+  "en": "2 DJs, 1 iPhone",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "この iPhone を回して B2B",
+  "en": "Pass this iPhone back and forth",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "AUTO DJ と対戦",
+  "en": "VS AUTO DJ",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "相手は自動で曲を選ぶ",
+  "en": "Your partner picks by itself",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "流しっぱなし",
+  "en": "Just play",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "両方 AUTO で自動 DJ",
+  "en": "Both AUTO, sit back",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "iPhone 2台で対戦",
+  "en": "2 iPhones",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "近くの iPhone とつなぐ",
+  "en": "Link a nearby iPhone",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "だれと遊ぶ？",
+  "en": "Who's playing?",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "会場",
+  "en": "Venue",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "遊び方",
+  "en": "Mode",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "曲数",
+  "en": "SESSION LENGTH",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "無制限",
+  "en": "ENDLESS",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "1曲の再生時間",
+  "en": "PLAY TIME PER TRACK",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "30秒",
+  "en": "30s",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "60秒",
+  "en": "60s",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "90秒",
+  "en": "90s",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "最後まで",
+  "en": "FULL",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "時間が来たら次の曲へ切り替わります（曲同士を重ねるミックスはしません）。",
+  "en": "When time is up the next track starts. Tracks are never mixed together.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "次の曲を相手に隠す",
+  "en": "Hide next track from partner",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "観客",
+  "en": "CROWD",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "歓声・指笛・拍手を鳴らす",
+  "en": "Cheers, whistles and applause",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "VJ（画面の映像）",
+  "en": "VJ",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "LED 画面の映像。曲のジャケットとタイトル、盛り上がりで変わります（音は解析しません）。",
+  "en": "Visuals on the LED screens, driven by artwork, title and crowd energy (no audio analysis).",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "画面を2分割（iPhone Duo）",
+  "en": "SPLIT SCREEN (iPhone Duo)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "iPhone Duo を開くと画面が左右に分かれ、2人がそれぞれの半分で同時に選曲できます。AUTO は広い画面のときだけ分けます。",
+  "en": "On an open iPhone Duo the screen splits left and right so each DJ picks on their own half. AUTO splits only on wide screens.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "そのほかの設定（曲数・再生時間・観客・VJ など）",
+  "en": "More settings (length, play time, crowd, VJ...)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "スタート · \\(music.sourceLabel)",
+  "en": "START · \\(music.sourceLabel)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music に接続するか AUDIUS / DEMO を選ぶ",
+  "en": "Connect Apple Music, or pick AUDIUS / DEMO",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "観客はルールで反応。",
+  "en": "The crowd reacts by rules.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "周りの人が絵文字で反応。AI 観客は休み。",
+  "en": "People around you react with emoji. No AI crowd.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "AI 観客と周りの人の反応を混ぜる。",
+  "en": "Mix AI crowd and real reactions.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "45秒",
+  "en": "45s",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "15秒",
+  "en": "15s",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "DJの名前",
+  "en": "DJ NAME",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "2台ともこのアプリを入れてください。",
+  "en": "Both iPhones need this app installed.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "1台目は「ホスト」、2台目は「参加」を押して、出てきた相手の名前をタップするとつながります。",
+  "en": "Tap HOST on one iPhone and JOIN on the other, then tap the host's name.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "近くにいるときだけ使えます。Wi‑Fi か Bluetooth をオンに。初めてのときに出る「ローカルネットワーク」の確認は「許可」を押してください。",
+  "en": "Works only nearby. Turn on Wi‑Fi or Bluetooth, and tap Allow when asked about the local network.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "音はホストの iPhone からだけ鳴ります。会場・観客・DJ の画面は2台とも同じものが映ります。",
+  "en": "Music plays only from the host. Both iPhones show the same venue, crowd and DJs.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ホストが Apple Music のときは、JOIN 側の iPhone でも曲を探すために Apple Music の許可が必要です。AUDIUS か DEMO なら Apple Music は無くても遊べます。",
+  "en": "If the host uses Apple Music, the JOIN side also needs Apple Music access to search. With AUDIUS or DEMO, no Apple Music is needed.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ホスト側の Apple Music に無い曲は流せません。そのときは選び直しになります。",
+  "en": "Tracks missing from the host's Apple Music can't play; pick another.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "2台で遊ぶには",
+  "en": "How to play on 2 iPhones",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "追加",
+  "en": "Add",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "セッションを遊ぶと DJ 名ごとに記録が残ります。",
+  "en": "Play a session and each DJ name keeps its own record.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "好きなジャンル",
+  "en": "FAV GENRE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "新しい実績",
+  "en": "NEW ACHIEVEMENTS",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "リザルトをシェア",
+  "en": "Share result",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "同じ設定でもう一回",
+  "en": "REMATCH",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "設定を変える",
+  "en": "CHANGE SETUP",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "曲名・アーティスト",
+  "en": "Song or artist",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "閉じる",
+  "en": "Close",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "「\\(cur.title)」から連想する曲",
+  "en": "Link from “\\(cur.title)”",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "カタログ",
+  "en": "Catalog",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ライブラリ",
+  "en": "Library",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "再生済み",
+  "en": "PLAYED",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "音源・メタデータ提供: Audius（アーティストの公式アップロード）",
+  "en": "Music & metadata: Audius (uploaded by the artists)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "見つかりませんでした",
+  "en": "No results",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "検索できませんでした（通信を確認してください）",
+  "en": "Search failed. Check your connection.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "ライブラリを読めませんでした",
+  "en": "Couldn't read your library",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Audius を読めませんでした",
+  "en": "Couldn't reach Audius",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "まだ Audius から選んだ曲はありません",
+  "en": "No Audius picks yet",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "セッションを終了しますか？",
+  "en": "End this session?",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "終了してリザルトへ",
+  "en": "End and see results",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "まだ何も流れていない",
+  "en": "Nothing playing yet",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "AUTO：\\(game.name(dj)) が曲を探しています…",
+  "en": "AUTO: \\(game.name(dj)) is digging for a track…",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(dj)) が相手の iPhone で選曲中…",
+  "en": "\\(game.name(dj)) is picking on their iPhone…",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "切り替わるまで秘密",
+  "en": "Hidden until it drops",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "変更",
+  "en": "Change",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "次の曲を選ぶ",
+  "en": "PICK NEXT TRACK",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(1 - game.currentOwner))：繋がってる？",
+  "en": "\\(game.name(1 - game.currentOwner)): linked?",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(1 - game.currentOwner))：お題「\\(game.config.theme)」に合ってる？",
+  "en": "\\(game.name(1 - game.currentOwner)): fits “\\(game.config.theme)”?",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(game.selector)) が1曲目を選ぶ",
+  "en": "\\(game.name(game.selector)) picks the opener",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "1曲目を選ぶ",
+  "en": "PICK OPENER",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "無音！",
+  "en": "SILENCE!",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(game.selector)) 早く次の曲を！",
+  "en": "\\(game.name(game.selector)), drop the next track!",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "再開",
+  "en": "RESUME",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "セッション終了",
+  "en": "END SESSION",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(game.selector)) だけが画面を見てください",
+  "en": "Only \\(game.name(game.selector)) should look now",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "OK、選ぶ",
+  "en": "OK, pick",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "やめる",
+  "en": "Cancel",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "繋がってる？",
+  "en": "Linked?",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "お題に合ってる？",
+  "en": "Fits the theme?",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "AUTO が曲を探しています…",
+  "en": "AUTO is digging for a track…",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(1 - dj)) が1曲目を選んでいます",
+  "en": "\\(game.name(1 - dj)) is picking the opener",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "\\(game.name(1 - dj)) が次の曲を選んでいます",
+  "en": "\\(game.name(1 - dj)) is picking next",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "選曲だけでフロアを100%まで沸かせ",
+  "en": "Move the floor to 100% with selection alone",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "DJ プロフィール",
+  "en": "DJ PROFILES",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "音楽",
+  "en": "MUSIC SOURCE",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music に接続",
+  "en": "Connect Apple Music",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "設定を開く",
+  "en": "Open Settings",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music に登録",
+  "en": "Get Apple Music",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "デモモード（音なし・架空の曲）",
+  "en": "Demo mode (silent, fictional tracks)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Audius（無料・登録不要）",
+  "en": "Audius (free, no sign-in)",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music を確認中…",
+  "en": "Checking Apple Music…",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music 接続済み",
+  "en": "Apple Music connected",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music の再生ができません",
+  "en": "Apple Music playback unavailable",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music へのアクセスが拒否されています",
+  "en": "Apple Music access denied",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music が制限されています",
+  "en": "Apple Music is restricted",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "Apple Music 未接続",
+  "en": "Apple Music not connected",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "流れとルールを試すモード。曲は再生されません。",
+  "en": "Try the rules and flow. No music plays.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "アーティストが Audius に公開している曲を公式 API でストリーミングします。ネット接続が必要です。",
+  "en": "Streams tracks artists publish on Audius through the official API. Needs a connection.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "曲の再生には Apple Music のサブスクリプションが必要です。",
+  "en": "Playing songs requires an Apple Music subscription.",
+  "hans": "",
+  "hant": ""
+ },
+ {
+  "ja": "設定アプリで「メディアと Apple Music」を許可するか、DEMO で遊べます。",
+  "en": "Allow Media & Apple Music in Settings, or play in DEMO.",
+  "hans": "",
+  "hant": ""
+ }
+]

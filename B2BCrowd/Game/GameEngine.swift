@@ -171,12 +171,12 @@ final class GameEngine {
         if isMirror { sendCommand?(.judge(ok)); return }
         guard needsJudge else { return }
         judgedThisRound = true
-        let tag = config.mode == .shiritori ? L.t("繋がった", "LINKED") : L.t("テーマ一致", "THEME MATCH")
+        let tag = config.mode == .shiritori ? L.t("繋がった", "LINKED", hans: "接上了", hant: "接上了") : L.t("テーマ一致", "THEME MATCH", hans: "符合主题", hant: "符合主題")
         if ok {
             add(8, dj: currentOwner, kind: .selection, label: tag)
             SoundFX.shared.play(.cheer)
         } else {
-            add(-10, dj: currentOwner, kind: .selection, label: L.t("テーマ違反", "OFF THEME"))
+            add(-10, dj: currentOwner, kind: .selection, label: L.t("テーマ違反", "OFF THEME", hans: "偏离主题", hant: "偏離主題"))
             SoundFX.shared.play(.boo)
         }
     }
@@ -274,7 +274,7 @@ final class GameEngine {
             finish(.quit)
         } else {
             localDJ = nil
-            flash(.notice(L.t("相手の接続が切れました。この iPhone で続けます", "Partner disconnected. Carry on with this iPhone.")), seconds: 4)
+            flash(.notice(L.t("相手の接続が切れました。この iPhone で続けます", "Partner disconnected. Carry on with this iPhone.", hans: "对方已断开连接。将在这台 iPhone 上继续", hant: "對方已中斷連線。將在這支 iPhone 上繼續")), seconds: 4)
         }
     }
 
@@ -311,7 +311,7 @@ final class GameEngine {
             if let t {
                 self.reserve(t)
             } else {
-                self.flash(.notice(L.t("AUTO：候補の曲が見つかりません", "AUTO: no track found")))
+                self.flash(.notice(L.t("AUTO：候補の曲が見つかりません", "AUTO: no track found", hans: "AUTO：找不到候选曲目", hant: "AUTO：找不到候選曲目")))
                 self.pass()
             }
         }
@@ -343,7 +343,7 @@ final class GameEngine {
         case .playing, .countdown:
             if player.isInterrupted {
                 pause()
-                flash(.notice(L.t("中断されました。再開をタップ", "Interrupted. Tap resume.")))
+                flash(.notice(L.t("中断されました。再開をタップ", "Interrupted. Tap resume.", hans: "已中断。点按继续", hant: "已中斷。點一下繼續")))
                 return
             }
             trackElapsed = player.elapsed
@@ -461,7 +461,7 @@ final class GameEngine {
             timedOut = true
             phase = .waitingForNextDJ
             let reason = (error as? AudiusError)?.errorDescription ?? (error as? LinkError)?.errorDescription
-            flash(.notice(reason ?? L.t("この曲は再生できません。選び直してください", "This track can't play. Pick another.")), seconds: 3.5)
+            flash(.notice(reason ?? L.t("この曲は再生できません。選び直してください", "This track can't play. Pick another.", hans: "这首歌无法播放。请重新选择", hant: "這首歌無法播放。請重新選擇")), seconds: 3.5)
             return
         }
         MusicAnalytics.shared.count(.playSuccess)
@@ -481,14 +481,14 @@ final class GameEngine {
         let prev = rounds.dropLast().last?.track
 
         if playedIDs.contains(t.id) {
-            add(-20, dj: owner, kind: .selection, label: L.t("同じ曲", "REPEAT"))
+            add(-20, dj: owner, kind: .selection, label: L.t("同じ曲", "REPEAT", hans: "重复曲目", hant: "重複曲目"))
             return
         }
         if config.mode == .genre {
             if config.genre.matches(t) {
                 add(8, dj: owner, kind: .selection, label: config.genre.id)
             } else {
-                add(-10, dj: owner, kind: .selection, label: L.t("ジャンル違い", "OFF GENRE"))
+                add(-10, dj: owner, kind: .selection, label: L.t("ジャンル違い", "OFF GENRE", hans: "风格不符", hant: "曲風不符"))
             }
         }
         if let at = selectedAt, prev != nil, at <= 20 {
@@ -496,7 +496,7 @@ final class GameEngine {
         }
         if let prev {
             if prev.artist == t.artist {
-                add(-3, dj: owner, kind: .flow, label: L.t("同じアーティスト", "SAME ARTIST"))
+                add(-3, dj: owner, kind: .flow, label: L.t("同じアーティスト", "SAME ARTIST", hans: "同一艺人", hant: "同一位藝人"))
             } else if config.mode != .genre, !Set(prev.genres).isDisjoint(with: t.genres) {
                 add(4, dj: owner, kind: .flow, label: "FLOW")
             }
@@ -526,13 +526,13 @@ final class GameEngine {
         s += Double.random(in: -0.22...0.22)
         let weight = config.crowd == .mix ? 0.6 : 1.0
         if s > 0.62 {
-            add(10 * weight, dj: r.dj, kind: .crowd, label: L.t("観客高評価", "CROWD LOVES IT"))
+            add(10 * weight, dj: r.dj, kind: .crowd, label: L.t("観客高評価", "CROWD LOVES IT", hans: "观众好评", hant: "觀眾好評"))
             SoundFX.shared.play(.cheer)
         } else if s < 0.32 {
-            add(-6 * weight, dj: r.dj, kind: .crowd, label: L.t("観客が冷めた", "CROWD COOLING"))
+            add(-6 * weight, dj: r.dj, kind: .crowd, label: L.t("観客が冷めた", "CROWD COOLING", hans: "观众冷场了", hant: "觀眾冷掉了"))
             SoundFX.shared.play(.boo)
         } else {
-            add(3 * weight, dj: r.dj, kind: .crowd, label: L.t("観客ノリノリ", "CROWD GROOVING"))
+            add(3 * weight, dj: r.dj, kind: .crowd, label: L.t("観客ノリノリ", "CROWD GROOVING", hans: "观众嗨翻了", hant: "觀眾嗨翻了"))
             SoundFX.shared.play(.woo)
         }
     }

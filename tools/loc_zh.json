@@ -1,0 +1,1208 @@
+[
+ {
+  "ja": "自動",
+  "en": "AUTO",
+  "hans": "自动",
+  "hant": "自動"
+ },
+ {
+  "ja": "分ける",
+  "en": "ON",
+  "hans": "分屏",
+  "hant": "分割"
+ },
+ {
+  "ja": "分けない",
+  "en": "OFF",
+  "hans": "不分屏",
+  "hant": "不分割"
+ },
+ {
+  "ja": "繋がった",
+  "en": "LINKED",
+  "hans": "接上了",
+  "hant": "接上了"
+ },
+ {
+  "ja": "テーマ一致",
+  "en": "THEME MATCH",
+  "hans": "符合主题",
+  "hant": "符合主題"
+ },
+ {
+  "ja": "テーマ違反",
+  "en": "OFF THEME",
+  "hans": "偏离主题",
+  "hant": "偏離主題"
+ },
+ {
+  "ja": "相手の接続が切れました。この iPhone で続けます",
+  "en": "Partner disconnected. Carry on with this iPhone.",
+  "hans": "对方已断开连接。将在这台 iPhone 上继续",
+  "hant": "對方已中斷連線。將在這支 iPhone 上繼續"
+ },
+ {
+  "ja": "AUTO：候補の曲が見つかりません",
+  "en": "AUTO: no track found",
+  "hans": "AUTO：找不到候选曲目",
+  "hant": "AUTO：找不到候選曲目"
+ },
+ {
+  "ja": "中断されました。再開をタップ",
+  "en": "Interrupted. Tap resume.",
+  "hans": "已中断。点按继续",
+  "hant": "已中斷。點一下繼續"
+ },
+ {
+  "ja": "この曲は再生できません。選び直してください",
+  "en": "This track can't play. Pick another.",
+  "hans": "这首歌无法播放。请重新选择",
+  "hant": "這首歌無法播放。請重新選擇"
+ },
+ {
+  "ja": "同じ曲",
+  "en": "REPEAT",
+  "hans": "重复曲目",
+  "hant": "重複曲目"
+ },
+ {
+  "ja": "ジャンル違い",
+  "en": "OFF GENRE",
+  "hans": "风格不符",
+  "hant": "曲風不符"
+ },
+ {
+  "ja": "同じアーティスト",
+  "en": "SAME ARTIST",
+  "hans": "同一艺人",
+  "hant": "同一位藝人"
+ },
+ {
+  "ja": "観客高評価",
+  "en": "CROWD LOVES IT",
+  "hans": "观众好评",
+  "hant": "觀眾好評"
+ },
+ {
+  "ja": "観客が冷めた",
+  "en": "CROWD COOLING",
+  "hans": "观众冷场了",
+  "hant": "觀眾冷掉了"
+ },
+ {
+  "ja": "観客ノリノリ",
+  "en": "CROWD GROOVING",
+  "hans": "观众嗨翻了",
+  "hant": "觀眾嗨翻了"
+ },
+ {
+  "ja": "フリー B2B",
+  "en": "FREE B2B",
+  "hans": "自由 B2B",
+  "hant": "自由 B2B"
+ },
+ {
+  "ja": "ジャンル縛り",
+  "en": "GENRE BATTLE",
+  "hans": "风格限定",
+  "hant": "曲風限定"
+ },
+ {
+  "ja": "お題バトル",
+  "en": "THEME BATTLE",
+  "hans": "主题对决",
+  "hant": "主題對決"
+ },
+ {
+  "ja": "DJしりとり",
+  "en": "DJ SHIRITORI",
+  "hans": "DJ 接龙",
+  "hant": "DJ 接龍"
+ },
+ {
+  "ja": "シークレット",
+  "en": "SECRET TRACK",
+  "hans": "秘密曲目",
+  "hant": "秘密曲目"
+ },
+ {
+  "ja": "タイムアタック",
+  "en": "TIME ATTACK",
+  "hans": "限时挑战",
+  "hant": "限時挑戰"
+ },
+ {
+  "ja": "サバイバル",
+  "en": "SURVIVAL",
+  "hans": "生存模式",
+  "hant": "生存模式"
+ },
+ {
+  "ja": "100%チャレンジ",
+  "en": "100% CHALLENGE",
+  "hans": "100%挑战",
+  "hant": "100%挑戰"
+ },
+ {
+  "ja": "縛りなし。好きな曲で返し合う。",
+  "en": "No rules. Answer each other with any track.",
+  "hans": "没有限制。用喜欢的歌互相接招。",
+  "hant": "沒有限制。用喜歡的歌互相接招。"
+ },
+ {
+  "ja": "決めたジャンルの曲だけで勝負。Apple Music のジャンル情報で判定。",
+  "en": "Stay inside one genre. Judged by Apple Music genre data.",
+  "hans": "只用选定风格的歌对决。根据 Apple Music 的风格信息判定。",
+  "hant": "只用選定曲風的歌對決。依 Apple Music 的曲風資訊判定。"
+ },
+ {
+  "ja": "お題に合う曲で返す。合ってるかは相手DJが判定。",
+  "en": "Pick tracks that fit the theme. Your partner judges.",
+  "hans": "用符合主题的歌接招。是否符合由对方 DJ 判定。",
+  "hant": "用符合主題的歌接招。是否符合由對方 DJ 判定。"
+ },
+ {
+  "ja": "前の曲から連想した曲で返す。繋がりは相手DJが判定。",
+  "en": "Answer with a track linked to the last one. Your partner judges.",
+  "hans": "用从上一首联想到的歌接招。关联由对方 DJ 判定。",
+  "hant": "用從上一首聯想到的歌接招。關聯由對方 DJ 判定。"
+ },
+ {
+  "ja": "次の曲は切り替わるまで相手に秘密。",
+  "en": "Your next track stays hidden until it drops.",
+  "hans": "下一首在切换前对对方保密。",
+  "hant": "下一首在切換前對對方保密。"
+ },
+ {
+  "ja": "制限時間内に次の曲を決める。",
+  "en": "Lock in your next track before the timer runs out.",
+  "hans": "在限定时间内决定下一首。",
+  "hant": "在時限內決定下一首。"
+ },
+ {
+  "ja": "ENERGY が 0 になったらフロアが空っぽ。GAME OVER。",
+  "en": "If ENERGY hits 0, the floor empties. Game over.",
+  "hans": "ENERGY 归 0 时舞池就空了。GAME OVER。",
+  "hant": "ENERGY 歸 0 時舞池就空了。GAME OVER。"
+ },
+ {
+  "ja": "選曲だけで ENERGY 100 を目指す。",
+  "en": "Push the floor to 100 with selection alone.",
+  "hans": "只靠选曲把 ENERGY 推到 100。",
+  "hant": "只靠選曲把 ENERGY 推到 100。"
+ },
+ {
+  "ja": "AI 観客",
+  "en": "AI",
+  "hans": "AI 观众",
+  "hant": "AI 觀眾"
+ },
+ {
+  "ja": "周りの人",
+  "en": "PLAYER",
+  "hans": "周围的人",
+  "hant": "身邊的人"
+ },
+ {
+  "ja": "両方",
+  "en": "MIX",
+  "hans": "混合",
+  "hant": "混合"
+ },
+ {
+  "ja": "小さなクラブ",
+  "en": "SMALL CLUB",
+  "hans": "小型俱乐部",
+  "hant": "小型夜店"
+ },
+ {
+  "ja": "地下クラブ",
+  "en": "UNDERGROUND",
+  "hans": "地下俱乐部",
+  "hant": "地下夜店"
+ },
+ {
+  "ja": "倉庫レイヴ",
+  "en": "WAREHOUSE",
+  "hans": "仓库锐舞",
+  "hant": "倉庫派對"
+ },
+ {
+  "ja": "屋上",
+  "en": "ROOFTOP",
+  "hans": "屋顶",
+  "hant": "屋頂"
+ },
+ {
+  "ja": "ビーチ",
+  "en": "BEACH",
+  "hans": "海滩",
+  "hant": "海灘"
+ },
+ {
+  "ja": "東京の夜",
+  "en": "TOKYO NIGHT",
+  "hans": "东京之夜",
+  "hant": "東京之夜"
+ },
+ {
+  "ja": "サイバークラブ",
+  "en": "CYBER CLUB",
+  "hans": "赛博俱乐部",
+  "hant": "賽博夜店"
+ },
+ {
+  "ja": "巨大フェス",
+  "en": "MEGA FESTIVAL",
+  "hans": "超大音乐节",
+  "hant": "超大音樂祭"
+ },
+ {
+  "ja": "宇宙クラブ",
+  "en": "SPACE CLUB",
+  "hans": "太空俱乐部",
+  "hant": "太空夜店"
+ },
+ {
+  "ja": "森のレイヴ",
+  "en": "FOREST RAVE",
+  "hans": "森林锐舞",
+  "hant": "森林派對"
+ },
+ {
+  "ja": "レコード屋",
+  "en": "RECORD SHOP",
+  "hans": "唱片店",
+  "hant": "唱片行"
+ },
+ {
+  "ja": "森の野外レイヴ",
+  "en": "Outdoor forest rave",
+  "hans": "森林户外锐舞",
+  "hant": "森林戶外派對"
+ },
+ {
+  "ja": "レコード屋の店内",
+  "en": "Inside a record shop",
+  "hans": "唱片店内",
+  "hant": "唱片行店內"
+ },
+ {
+  "ja": "おまかせ",
+  "en": "AUTO",
+  "hans": "自动",
+  "hant": "自動"
+ },
+ {
+  "ja": "トンネル",
+  "en": "TUNNEL",
+  "hans": "隧道",
+  "hant": "隧道"
+ },
+ {
+  "ja": "万華鏡",
+  "en": "KALEIDO",
+  "hans": "万花筒",
+  "hant": "萬花筒"
+ },
+ {
+  "ja": "ジャケット",
+  "en": "ARTWORK",
+  "hans": "专辑封面",
+  "hant": "專輯封面"
+ },
+ {
+  "ja": "プラズマ",
+  "en": "PLASMA",
+  "hans": "等离子",
+  "hant": "電漿"
+ },
+ {
+  "ja": "文字",
+  "en": "TYPO",
+  "hans": "文字",
+  "hant": "文字"
+ },
+ {
+  "ja": "なし",
+  "en": "OFF",
+  "hans": "无",
+  "hant": "無"
+ },
+ {
+  "ja": "接続が切れました",
+  "en": "Connection lost",
+  "hans": "连接已断开",
+  "hant": "連線已中斷"
+ },
+ {
+  "ja": "つながりませんでした。もう一度試してください",
+  "en": "Couldn't connect. Try again.",
+  "hans": "连接失败。请再试一次",
+  "hant": "連線失敗。請再試一次"
+ },
+ {
+  "ja": "この曲はこちらの Apple Music で見つかりません",
+  "en": "This track isn't in this Apple Music storefront",
+  "hans": "在这边的 Apple Music 中找不到这首歌",
+  "hant": "在這邊的 Apple Music 找不到這首歌"
+ },
+ {
+  "ja": "ストリーム不可",
+  "en": "NOT STREAMABLE",
+  "hans": "不可串流",
+  "hant": "無法串流"
+ },
+ {
+  "ja": "限定公開",
+  "en": "GATED",
+  "hans": "限定公开",
+  "hant": "限定公開"
+ },
+ {
+  "ja": "アクセス制限",
+  "en": "RESTRICTED",
+  "hans": "访问受限",
+  "hant": "存取受限"
+ },
+ {
+  "ja": "他アプリ専用",
+  "en": "APP-RESTRICTED",
+  "hans": "其他应用专用",
+  "hant": "其他 App 專用"
+ },
+ {
+  "ja": "公開終了",
+  "en": "UNAVAILABLE",
+  "hans": "已下架",
+  "hant": "已下架"
+ },
+ {
+  "ja": "ライセンス対象外",
+  "en": "LICENSE FILTERED",
+  "hans": "不在授权范围内",
+  "hant": "不在授權範圍內"
+ },
+ {
+  "ja": "通信できませんでした。接続を確認してください",
+  "en": "Network error. Check your connection.",
+  "hans": "网络连接失败。请检查连接",
+  "hant": "無法連線。請檢查網路連線"
+ },
+ {
+  "ja": "Audius の応答エラー（\\(code)）",
+  "en": "Audius API error (\\(code))",
+  "hans": "Audius 响应错误（\\(code)）",
+  "hant": "Audius 回應錯誤（\\(code)）"
+ },
+ {
+  "ja": "リクエストが多すぎます。少し待ってください",
+  "en": "Too many requests. Wait a moment.",
+  "hans": "请求过多。请稍候",
+  "hant": "請求過多。請稍候"
+ },
+ {
+  "ja": "Audius の認証に失敗しました（API キーを確認）",
+  "en": "Audius authentication failed (check the API key).",
+  "hans": "Audius 认证失败（请检查 API 密钥）",
+  "hant": "Audius 驗證失敗（請檢查 API 金鑰）"
+ },
+ {
+  "ja": "この曲は現在 B2B で再生できません（\\(r.label)）",
+  "en": "This track can't play in B2B right now (\\(r.label)).",
+  "hans": "这首歌目前无法在 B2B 中播放（\\(r.label)）",
+  "hant": "這首歌目前無法在 B2B 中播放（\\(r.label)）"
+ },
+ {
+  "ja": "ストリーミングを開始できませんでした。別の曲を選んでください",
+  "en": "Couldn't start the stream. Pick another track.",
+  "hans": "无法开始串流播放。请选择其他歌曲",
+  "hant": "無法開始串流。請選擇其他歌曲"
+ },
+ {
+  "ja": "この地域では再生できない曲です",
+  "en": "This track isn't available in your region.",
+  "hans": "这首歌在你所在的地区无法播放",
+  "hant": "這首歌在你所在的地區無法播放"
+ },
+ {
+  "ja": "この曲はアクセスが制限されています",
+  "en": "Access to this track is restricted.",
+  "hans": "这首歌的访问受到限制",
+  "hant": "這首歌的存取受到限制"
+ },
+ {
+  "ja": "Audius の応答を読めませんでした",
+  "en": "Couldn't read the Audius response.",
+  "hans": "无法读取 Audius 的响应",
+  "hant": "無法讀取 Audius 的回應"
+ },
+ {
+  "ja": "初B2B",
+  "en": "First B2B",
+  "hans": "首次 B2B",
+  "hant": "首次 B2B"
+ },
+ {
+  "ja": "生還者（SURVIVAL完走）",
+  "en": "Survivor",
+  "hans": "幸存者（完成 SURVIVAL）",
+  "hant": "倖存者（完成 SURVIVAL）"
+ },
+ {
+  "ja": "早撃ち（TIME ATTACK完走）",
+  "en": "Quick Hands",
+  "hans": "快手（完成 TIME ATTACK）",
+  "hant": "快手（完成 TIME ATTACK）"
+ },
+ {
+  "ja": "10セッション",
+  "en": "10 Sessions",
+  "hans": "10 场演出",
+  "hant": "10 場演出"
+ },
+ {
+  "ja": "セッションの準備",
+  "en": "SESSION SETUP",
+  "hans": "演出准备",
+  "hant": "演出準備"
+ },
+ {
+  "ja": "近くの iPhone とつないで、それぞれの iPhone で選曲。音はホストの iPhone から鳴ります（Wi‑Fi か Bluetooth をオン）。",
+  "en": "Link with a nearby iPhone and pick tracks on your own phone. Music plays from the host (turn on Wi‑Fi or Bluetooth).",
+  "hans": "与附近的 iPhone 连接，各自在自己的 iPhone 上选曲。声音从主机的 iPhone 播放（请打开 Wi‑Fi 或蓝牙）。",
+  "hant": "與附近的 iPhone 連線，各自在自己的 iPhone 上選曲。聲音從主機的 iPhone 播放（請開啟 Wi‑Fi 或藍牙）。"
+ },
+ {
+  "ja": "ホスト",
+  "en": "HOST",
+  "hans": "主机",
+  "hant": "主機"
+ },
+ {
+  "ja": "音を鳴らす側・DJ A",
+  "en": "Plays music · DJ A",
+  "hans": "播放声音的一方 · DJ A",
+  "hant": "播放聲音的一方 · DJ A"
+ },
+ {
+  "ja": "参加",
+  "en": "JOIN",
+  "hans": "加入",
+  "hant": "加入"
+ },
+ {
+  "ja": "相手に参加・DJ B",
+  "en": "Join a host · DJ B",
+  "hans": "加入对方 · DJ B",
+  "hant": "加入對方 · DJ B"
+ },
+ {
+  "ja": "接続中：\\(link.partnerName ?? \"…\")（DJ B）",
+  "en": "Linked: \\(link.partnerName ?? \"…\") (DJ B)",
+  "hans": "已连接：\\(link.partnerName ?? \"…\")（DJ B）",
+  "hant": "已連線：\\(link.partnerName ?? \"…\")（DJ B）"
+ },
+ {
+  "ja": "相手の iPhone で「参加」を押してもらってください",
+  "en": "Ask your partner to tap JOIN on their iPhone",
+  "hans": "请对方在 iPhone 上点“加入”",
+  "hant": "請對方在 iPhone 上點「加入」"
+ },
+ {
+  "ja": "やめる",
+  "en": "Stop",
+  "hans": "停止",
+  "hant": "停止"
+ },
+ {
+  "ja": "あなた（DJ B）",
+  "en": "YOU (DJ B)",
+  "hans": "你（DJ B）",
+  "hant": "你（DJ B）"
+ },
+ {
+  "ja": "ホストにつなぐ",
+  "en": "CONNECT TO HOST",
+  "hans": "连接主机",
+  "hant": "連線主機"
+ },
+ {
+  "ja": "2台対戦をやめる",
+  "en": "Leave versus",
+  "hans": "退出双机对战",
+  "hant": "退出雙機對戰"
+ },
+ {
+  "ja": "\\(link.partnerName ?? \"ホスト\") につながりました",
+  "en": "Linked with \\(link.partnerName ?? \"host\")",
+  "hans": "已连接到 \\(link.partnerName ?? \"host\")",
+  "hant": "已連線到 \\(link.partnerName ?? \"host\")"
+ },
+ {
+  "ja": "ホストがスタートを押すと始まります。音はホストの iPhone から鳴ります。",
+  "en": "The session starts when the host taps START. Music plays from the host's iPhone.",
+  "hans": "主机按下“开始”后就会开始。声音从主机的 iPhone 播放。",
+  "hant": "主機按下「開始」後就會開始。聲音從主機的 iPhone 播放。"
+ },
+ {
+  "ja": "近くのホストを探しています…",
+  "en": "Looking for a nearby host…",
+  "hans": "正在寻找附近的主机…",
+  "hant": "正在尋找附近的主機…"
+ },
+ {
+  "ja": "相手の iPhone で SESSION SETUP の「ホスト」を押してもらってください。",
+  "en": "Ask your partner to tap HOST in SESSION SETUP.",
+  "hans": "请对方在 iPhone 的“演出准备”中点“主机”。",
+  "hant": "請對方在 iPhone 的「演出準備」中點「主機」。"
+ },
+ {
+  "ja": "つなぐ",
+  "en": "Connect",
+  "hans": "连接",
+  "hant": "連線"
+ },
+ {
+  "ja": "ふたりで交代",
+  "en": "2 DJs, 1 iPhone",
+  "hans": "两人轮流",
+  "hant": "兩人輪流"
+ },
+ {
+  "ja": "この iPhone を回して B2B",
+  "en": "Pass this iPhone back and forth",
+  "hans": "轮流传递这台 iPhone 来 B2B",
+  "hant": "輪流傳遞這支 iPhone 來 B2B"
+ },
+ {
+  "ja": "AUTO DJ と対戦",
+  "en": "VS AUTO DJ",
+  "hans": "对战 AUTO DJ",
+  "hant": "對戰 AUTO DJ"
+ },
+ {
+  "ja": "相手は自動で曲を選ぶ",
+  "en": "Your partner picks by itself",
+  "hans": "对手自动选曲",
+  "hant": "對手自動選曲"
+ },
+ {
+  "ja": "流しっぱなし",
+  "en": "Just play",
+  "hans": "持续播放",
+  "hant": "持續播放"
+ },
+ {
+  "ja": "両方 AUTO で自動 DJ",
+  "en": "Both AUTO, sit back",
+  "hans": "两边都 AUTO，自动 DJ",
+  "hant": "兩邊都 AUTO，自動 DJ"
+ },
+ {
+  "ja": "iPhone 2台で対戦",
+  "en": "2 iPhones",
+  "hans": "两台 iPhone 对战",
+  "hant": "兩支 iPhone 對戰"
+ },
+ {
+  "ja": "近くの iPhone とつなぐ",
+  "en": "Link a nearby iPhone",
+  "hans": "连接附近的 iPhone",
+  "hant": "連線附近的 iPhone"
+ },
+ {
+  "ja": "だれと遊ぶ？",
+  "en": "Who's playing?",
+  "hans": "和谁一起玩？",
+  "hant": "和誰一起玩？"
+ },
+ {
+  "ja": "会場",
+  "en": "Venue",
+  "hans": "场地",
+  "hant": "場地"
+ },
+ {
+  "ja": "遊び方",
+  "en": "Mode",
+  "hans": "玩法",
+  "hant": "玩法"
+ },
+ {
+  "ja": "曲数",
+  "en": "SESSION LENGTH",
+  "hans": "曲数",
+  "hant": "曲數"
+ },
+ {
+  "ja": "無制限",
+  "en": "ENDLESS",
+  "hans": "无限制",
+  "hant": "無限制"
+ },
+ {
+  "ja": "1曲の再生時間",
+  "en": "PLAY TIME PER TRACK",
+  "hans": "每首播放时长",
+  "hant": "每首播放時間"
+ },
+ {
+  "ja": "30秒",
+  "en": "30s",
+  "hans": "30秒",
+  "hant": "30秒"
+ },
+ {
+  "ja": "60秒",
+  "en": "60s",
+  "hans": "60秒",
+  "hant": "60秒"
+ },
+ {
+  "ja": "90秒",
+  "en": "90s",
+  "hans": "90秒",
+  "hant": "90秒"
+ },
+ {
+  "ja": "最後まで",
+  "en": "FULL",
+  "hans": "完整播放",
+  "hant": "完整播放"
+ },
+ {
+  "ja": "時間が来たら次の曲へ切り替わります（曲同士を重ねるミックスはしません）。",
+  "en": "When time is up the next track starts. Tracks are never mixed together.",
+  "hans": "时间一到就切换到下一首（不会把歌曲混接在一起）。",
+  "hant": "時間一到就切換到下一首（不會把歌曲混接在一起）。"
+ },
+ {
+  "ja": "次の曲を相手に隠す",
+  "en": "Hide next track from partner",
+  "hans": "对对方隐藏下一首",
+  "hant": "對對方隱藏下一首"
+ },
+ {
+  "ja": "観客",
+  "en": "CROWD",
+  "hans": "观众",
+  "hant": "觀眾"
+ },
+ {
+  "ja": "歓声・指笛・拍手を鳴らす",
+  "en": "Cheers, whistles and applause",
+  "hans": "播放欢呼、口哨和掌声",
+  "hant": "播放歡呼、口哨和掌聲"
+ },
+ {
+  "ja": "VJ（画面の映像）",
+  "en": "VJ",
+  "hans": "VJ（画面影像）",
+  "hant": "VJ（畫面影像）"
+ },
+ {
+  "ja": "LED 画面の映像。曲のジャケットとタイトル、盛り上がりで変わります（音は解析しません）。",
+  "en": "Visuals on the LED screens, driven by artwork, title and crowd energy (no audio analysis).",
+  "hans": "LED 屏幕的影像。会随歌曲封面、标题和气氛变化（不分析音频）。",
+  "hant": "LED 螢幕的影像。會隨歌曲封面、標題和氣氛變化（不分析音訊）。"
+ },
+ {
+  "ja": "画面を2分割（iPhone Duo）",
+  "en": "SPLIT SCREEN (iPhone Duo)",
+  "hans": "分屏（iPhone Duo）",
+  "hant": "分割畫面（iPhone Duo）"
+ },
+ {
+  "ja": "iPhone Duo を開くと画面が左右に分かれ、2人がそれぞれの半分で同時に選曲できます。AUTO は広い画面のときだけ分けます。",
+  "en": "On an open iPhone Duo the screen splits left and right so each DJ picks on their own half. AUTO splits only on wide screens.",
+  "hans": "打开 iPhone Duo 后画面会分为左右两半，两人可在各自那一半同时选曲。AUTO 只在宽屏时分屏。",
+  "hant": "打開 iPhone Duo 後畫面會分成左右兩半，兩人可在各自那一半同時選曲。AUTO 只在寬螢幕時分割。"
+ },
+ {
+  "ja": "そのほかの設定（曲数・再生時間・観客・VJ など）",
+  "en": "More settings (length, play time, crowd, VJ...)",
+  "hans": "更多设置（曲数、播放时长、观众、VJ 等）",
+  "hant": "更多設定（曲數、播放時間、觀眾、VJ 等）"
+ },
+ {
+  "ja": "スタート · \\(music.sourceLabel)",
+  "en": "START · \\(music.sourceLabel)",
+  "hans": "开始 · \\(music.sourceLabel)",
+  "hant": "開始 · \\(music.sourceLabel)"
+ },
+ {
+  "ja": "Apple Music に接続するか AUDIUS / DEMO を選ぶ",
+  "en": "Connect Apple Music, or pick AUDIUS / DEMO",
+  "hans": "连接 Apple Music，或选择 AUDIUS / DEMO",
+  "hant": "連結 Apple Music，或選擇 AUDIUS / DEMO"
+ },
+ {
+  "ja": "観客はルールで反応。",
+  "en": "The crowd reacts by rules.",
+  "hans": "观众按规则反应。",
+  "hant": "觀眾依規則反應。"
+ },
+ {
+  "ja": "周りの人が絵文字で反応。AI 観客は休み。",
+  "en": "People around you react with emoji. No AI crowd.",
+  "hans": "周围的人用表情符号反应。AI 观众休息。",
+  "hant": "身邊的人用表情符號反應。AI 觀眾休息。"
+ },
+ {
+  "ja": "AI 観客と周りの人の反応を混ぜる。",
+  "en": "Mix AI crowd and real reactions.",
+  "hans": "混合 AI 观众和周围人的反应。",
+  "hant": "混合 AI 觀眾和身邊的人的反應。"
+ },
+ {
+  "ja": "45秒",
+  "en": "45s",
+  "hans": "45秒",
+  "hant": "45秒"
+ },
+ {
+  "ja": "15秒",
+  "en": "15s",
+  "hans": "15秒",
+  "hant": "15秒"
+ },
+ {
+  "ja": "DJの名前",
+  "en": "DJ NAME",
+  "hans": "DJ 名称",
+  "hant": "DJ 名稱"
+ },
+ {
+  "ja": "2台ともこのアプリを入れてください。",
+  "en": "Both iPhones need this app installed.",
+  "hans": "两台都需要安装这个应用。",
+  "hant": "兩支都需要安裝這個 App。"
+ },
+ {
+  "ja": "1台目は「ホスト」、2台目は「参加」を押して、出てきた相手の名前をタップするとつながります。",
+  "en": "Tap HOST on one iPhone and JOIN on the other, then tap the host's name.",
+  "hans": "第一台点“主机”，第二台点“加入”，再点出现的对方名称即可连接。",
+  "hant": "第一支點「主機」，第二支點「加入」，再點出現的對方名稱即可連線。"
+ },
+ {
+  "ja": "近くにいるときだけ使えます。Wi‑Fi か Bluetooth をオンに。初めてのときに出る「ローカルネットワーク」の確認は「許可」を押してください。",
+  "en": "Works only nearby. Turn on Wi‑Fi or Bluetooth, and tap Allow when asked about the local network.",
+  "hans": "只能在附近使用。请打开 Wi‑Fi 或蓝牙。首次出现“本地网络”确认时请点“允许”。",
+  "hant": "只能在附近使用。請開啟 Wi‑Fi 或藍牙。第一次出現「區域網路」確認時請點「允許」。"
+ },
+ {
+  "ja": "音はホストの iPhone からだけ鳴ります。会場・観客・DJ の画面は2台とも同じものが映ります。",
+  "en": "Music plays only from the host. Both iPhones show the same venue, crowd and DJs.",
+  "hans": "声音只从主机的 iPhone 播放。两台都会显示相同的场地、观众和 DJ 画面。",
+  "hant": "聲音只從主機的 iPhone 播放。兩支都會顯示相同的場地、觀眾和 DJ 畫面。"
+ },
+ {
+  "ja": "ホストが Apple Music のときは、JOIN 側の iPhone でも曲を探すために Apple Music の許可が必要です。AUDIUS か DEMO なら Apple Music は無くても遊べます。",
+  "en": "If the host uses Apple Music, the JOIN side also needs Apple Music access to search. With AUDIUS or DEMO, no Apple Music is needed.",
+  "hans": "主机使用 Apple Music 时，JOIN 一方的 iPhone 也需要 Apple Music 授权才能搜索歌曲。使用 AUDIUS 或 DEMO 则没有 Apple Music 也能玩。",
+  "hant": "主機使用 Apple Music 時，JOIN 端的 iPhone 也需要 Apple Music 授權才能搜尋歌曲。使用 AUDIUS 或 DEMO 就算沒有 Apple Music 也能玩。"
+ },
+ {
+  "ja": "ホスト側の Apple Music に無い曲は流せません。そのときは選び直しになります。",
+  "en": "Tracks missing from the host's Apple Music can't play; pick another.",
+  "hans": "主机的 Apple Music 里没有的歌无法播放，这时需要重新选择。",
+  "hant": "主機的 Apple Music 沒有的歌無法播放，這時需要重新選擇。"
+ },
+ {
+  "ja": "2台で遊ぶには",
+  "en": "How to play on 2 iPhones",
+  "hans": "两台 iPhone 怎么玩",
+  "hant": "兩支 iPhone 怎麼玩"
+ },
+ {
+  "ja": "追加",
+  "en": "Add",
+  "hans": "添加",
+  "hant": "新增"
+ },
+ {
+  "ja": "セッションを遊ぶと DJ 名ごとに記録が残ります。",
+  "en": "Play a session and each DJ name keeps its own record.",
+  "hans": "玩过演出后，每个 DJ 名称都会留下记录。",
+  "hant": "玩過演出後，每個 DJ 名稱都會留下紀錄。"
+ },
+ {
+  "ja": "好きなジャンル",
+  "en": "FAV GENRE",
+  "hans": "喜欢的风格",
+  "hant": "喜歡的曲風"
+ },
+ {
+  "ja": "新しい実績",
+  "en": "NEW ACHIEVEMENTS",
+  "hans": "新成就",
+  "hant": "新成就"
+ },
+ {
+  "ja": "リザルトをシェア",
+  "en": "Share result",
+  "hans": "分享结果",
+  "hant": "分享結果"
+ },
+ {
+  "ja": "同じ設定でもう一回",
+  "en": "REMATCH",
+  "hans": "相同设置再来一次",
+  "hant": "相同設定再來一次"
+ },
+ {
+  "ja": "設定を変える",
+  "en": "CHANGE SETUP",
+  "hans": "更改设置",
+  "hant": "變更設定"
+ },
+ {
+  "ja": "曲名・アーティスト",
+  "en": "Song or artist",
+  "hans": "歌名或艺人",
+  "hant": "歌名或藝人"
+ },
+ {
+  "ja": "閉じる",
+  "en": "Close",
+  "hans": "关闭",
+  "hant": "關閉"
+ },
+ {
+  "ja": "「\\(cur.title)」から連想する曲",
+  "en": "Link from “\\(cur.title)”",
+  "hans": "由“\\(cur.title)”联想的歌",
+  "hant": "由「\\(cur.title)」聯想的歌"
+ },
+ {
+  "ja": "カタログ",
+  "en": "Catalog",
+  "hans": "曲库",
+  "hant": "曲庫"
+ },
+ {
+  "ja": "ライブラリ",
+  "en": "Library",
+  "hans": "资料库",
+  "hant": "資料庫"
+ },
+ {
+  "ja": "再生済み",
+  "en": "PLAYED",
+  "hans": "已播放",
+  "hant": "已播放"
+ },
+ {
+  "ja": "音源・メタデータ提供: Audius（アーティストの公式アップロード）",
+  "en": "Music & metadata: Audius (uploaded by the artists)",
+  "hans": "音源与元数据提供：Audius（艺人官方上传）",
+  "hant": "音源與詮釋資料提供：Audius（藝人官方上傳）"
+ },
+ {
+  "ja": "見つかりませんでした",
+  "en": "No results",
+  "hans": "未找到结果",
+  "hant": "找不到結果"
+ },
+ {
+  "ja": "検索できませんでした（通信を確認してください）",
+  "en": "Search failed. Check your connection.",
+  "hans": "搜索失败（请检查网络连接）",
+  "hant": "搜尋失敗（請檢查網路連線）"
+ },
+ {
+  "ja": "ライブラリを読めませんでした",
+  "en": "Couldn't read your library",
+  "hans": "无法读取资料库",
+  "hant": "無法讀取資料庫"
+ },
+ {
+  "ja": "Audius を読めませんでした",
+  "en": "Couldn't reach Audius",
+  "hans": "无法读取 Audius",
+  "hant": "無法讀取 Audius"
+ },
+ {
+  "ja": "まだ Audius から選んだ曲はありません",
+  "en": "No Audius picks yet",
+  "hans": "还没有从 Audius 选过歌",
+  "hant": "還沒有從 Audius 選過歌"
+ },
+ {
+  "ja": "セッションを終了しますか？",
+  "en": "End this session?",
+  "hans": "要结束这场演出吗？",
+  "hant": "要結束這場演出嗎？"
+ },
+ {
+  "ja": "終了してリザルトへ",
+  "en": "End and see results",
+  "hans": "结束并查看结果",
+  "hant": "結束並查看結果"
+ },
+ {
+  "ja": "まだ何も流れていない",
+  "en": "Nothing playing yet",
+  "hans": "还没有播放任何歌曲",
+  "hant": "還沒有播放任何歌曲"
+ },
+ {
+  "ja": "AUTO：\\(game.name(dj)) が曲を探しています…",
+  "en": "AUTO: \\(game.name(dj)) is digging for a track…",
+  "hans": "AUTO：\\(game.name(dj)) 正在找歌…",
+  "hant": "AUTO：\\(game.name(dj)) 正在找歌…"
+ },
+ {
+  "ja": "\\(game.name(dj)) が相手の iPhone で選曲中…",
+  "en": "\\(game.name(dj)) is picking on their iPhone…",
+  "hans": "\\(game.name(dj)) 正在对方的 iPhone 上选曲…",
+  "hant": "\\(game.name(dj)) 正在對方的 iPhone 上選曲…"
+ },
+ {
+  "ja": "切り替わるまで秘密",
+  "en": "Hidden until it drops",
+  "hans": "切换前保密",
+  "hant": "切換前保密"
+ },
+ {
+  "ja": "変更",
+  "en": "Change",
+  "hans": "更换",
+  "hant": "更換"
+ },
+ {
+  "ja": "次の曲を選ぶ",
+  "en": "PICK NEXT TRACK",
+  "hans": "选下一首",
+  "hant": "選下一首"
+ },
+ {
+  "ja": "\\(game.name(1 - game.currentOwner))：繋がってる？",
+  "en": "\\(game.name(1 - game.currentOwner)): linked?",
+  "hans": "\\(game.name(1 - game.currentOwner))：接得上吗？",
+  "hant": "\\(game.name(1 - game.currentOwner))：接得上嗎？"
+ },
+ {
+  "ja": "\\(game.name(1 - game.currentOwner))：お題「\\(game.config.theme)」に合ってる？",
+  "en": "\\(game.name(1 - game.currentOwner)): fits “\\(game.config.theme)”?",
+  "hans": "\\(game.name(1 - game.currentOwner))：符合主题“\\(game.config.theme)”吗？",
+  "hant": "\\(game.name(1 - game.currentOwner))：符合主題「\\(game.config.theme)」嗎？"
+ },
+ {
+  "ja": "\\(game.name(game.selector)) が1曲目を選ぶ",
+  "en": "\\(game.name(game.selector)) picks the opener",
+  "hans": "\\(game.name(game.selector)) 选第一首",
+  "hant": "\\(game.name(game.selector)) 選第一首"
+ },
+ {
+  "ja": "1曲目を選ぶ",
+  "en": "PICK OPENER",
+  "hans": "选第一首",
+  "hant": "選第一首"
+ },
+ {
+  "ja": "無音！",
+  "en": "SILENCE!",
+  "hans": "没声音了！",
+  "hant": "沒聲音了！"
+ },
+ {
+  "ja": "\\(game.name(game.selector)) 早く次の曲を！",
+  "en": "\\(game.name(game.selector)), drop the next track!",
+  "hans": "\\(game.name(game.selector)) 快放下一首！",
+  "hant": "\\(game.name(game.selector)) 快放下一首！"
+ },
+ {
+  "ja": "再開",
+  "en": "RESUME",
+  "hans": "继续",
+  "hant": "繼續"
+ },
+ {
+  "ja": "セッション終了",
+  "en": "END SESSION",
+  "hans": "结束演出",
+  "hant": "結束演出"
+ },
+ {
+  "ja": "\\(game.name(game.selector)) だけが画面を見てください",
+  "en": "Only \\(game.name(game.selector)) should look now",
+  "hans": "请只让 \\(game.name(game.selector)) 看画面",
+  "hant": "請只讓 \\(game.name(game.selector)) 看畫面"
+ },
+ {
+  "ja": "OK、選ぶ",
+  "en": "OK, pick",
+  "hans": "OK，开始选",
+  "hant": "OK，開始選"
+ },
+ {
+  "ja": "やめる",
+  "en": "Cancel",
+  "hans": "取消",
+  "hant": "取消"
+ },
+ {
+  "ja": "繋がってる？",
+  "en": "Linked?",
+  "hans": "接得上吗？",
+  "hant": "接得上嗎？"
+ },
+ {
+  "ja": "お題に合ってる？",
+  "en": "Fits the theme?",
+  "hans": "符合主题吗？",
+  "hant": "符合主題嗎？"
+ },
+ {
+  "ja": "AUTO が曲を探しています…",
+  "en": "AUTO is digging for a track…",
+  "hans": "AUTO 正在找歌…",
+  "hant": "AUTO 正在找歌…"
+ },
+ {
+  "ja": "\\(game.name(1 - dj)) が1曲目を選んでいます",
+  "en": "\\(game.name(1 - dj)) is picking the opener",
+  "hans": "\\(game.name(1 - dj)) 正在选第一首",
+  "hant": "\\(game.name(1 - dj)) 正在選第一首"
+ },
+ {
+  "ja": "\\(game.name(1 - dj)) が次の曲を選んでいます",
+  "en": "\\(game.name(1 - dj)) is picking next",
+  "hans": "\\(game.name(1 - dj)) 正在选下一首",
+  "hant": "\\(game.name(1 - dj)) 正在選下一首"
+ },
+ {
+  "ja": "選曲だけでフロアを100%まで沸かせ",
+  "en": "Move the floor to 100% with selection alone",
+  "hans": "只靠选曲把舞池嗨到 100%",
+  "hant": "只靠選曲把舞池炒熱到 100%"
+ },
+ {
+  "ja": "DJ プロフィール",
+  "en": "DJ PROFILES",
+  "hans": "DJ 资料",
+  "hant": "DJ 檔案"
+ },
+ {
+  "ja": "音楽",
+  "en": "MUSIC SOURCE",
+  "hans": "音乐",
+  "hant": "音樂"
+ },
+ {
+  "ja": "Apple Music に接続",
+  "en": "Connect Apple Music",
+  "hans": "连接 Apple Music",
+  "hant": "連結 Apple Music"
+ },
+ {
+  "ja": "設定を開く",
+  "en": "Open Settings",
+  "hans": "打开设置",
+  "hant": "開啟設定"
+ },
+ {
+  "ja": "Apple Music に登録",
+  "en": "Get Apple Music",
+  "hans": "订阅 Apple Music",
+  "hant": "訂閱 Apple Music"
+ },
+ {
+  "ja": "デモモード（音なし・架空の曲）",
+  "en": "Demo mode (silent, fictional tracks)",
+  "hans": "演示模式（无声、虚构曲目）",
+  "hant": "示範模式（無聲、虛構曲目）"
+ },
+ {
+  "ja": "Audius（無料・登録不要）",
+  "en": "Audius (free, no sign-in)",
+  "hans": "Audius（免费、无需注册）",
+  "hant": "Audius（免費、免註冊）"
+ },
+ {
+  "ja": "Apple Music を確認中…",
+  "en": "Checking Apple Music…",
+  "hans": "正在检查 Apple Music…",
+  "hant": "正在檢查 Apple Music…"
+ },
+ {
+  "ja": "Apple Music 接続済み",
+  "en": "Apple Music connected",
+  "hans": "Apple Music 已连接",
+  "hant": "Apple Music 已連結"
+ },
+ {
+  "ja": "Apple Music の再生ができません",
+  "en": "Apple Music playback unavailable",
+  "hans": "无法播放 Apple Music",
+  "hant": "無法播放 Apple Music"
+ },
+ {
+  "ja": "Apple Music へのアクセスが拒否されています",
+  "en": "Apple Music access denied",
+  "hans": "Apple Music 访问被拒绝",
+  "hant": "Apple Music 存取遭拒"
+ },
+ {
+  "ja": "Apple Music が制限されています",
+  "en": "Apple Music is restricted",
+  "hans": "Apple Music 受到限制",
+  "hant": "Apple Music 受到限制"
+ },
+ {
+  "ja": "Apple Music 未接続",
+  "en": "Apple Music not connected",
+  "hans": "Apple Music 未连接",
+  "hant": "Apple Music 未連結"
+ },
+ {
+  "ja": "流れとルールを試すモード。曲は再生されません。",
+  "en": "Try the rules and flow. No music plays.",
+  "hans": "试玩流程和规则的模式。不会播放歌曲。",
+  "hant": "試玩流程和規則的模式。不會播放歌曲。"
+ },
+ {
+  "ja": "アーティストが Audius に公開している曲を公式 API でストリーミングします。ネット接続が必要です。",
+  "en": "Streams tracks artists publish on Audius through the official API. Needs a connection.",
+  "hans": "通过官方 API 串流播放艺人在 Audius 上发布的歌曲。需要网络连接。",
+  "hant": "透過官方 API 串流播放藝人在 Audius 上發布的歌曲。需要網路連線。"
+ },
+ {
+  "ja": "曲の再生には Apple Music のサブスクリプションが必要です。",
+  "en": "Playing songs requires an Apple Music subscription.",
+  "hans": "播放歌曲需要订阅 Apple Music。",
+  "hant": "播放歌曲需要訂閱 Apple Music。"
+ },
+ {
+  "ja": "設定アプリで「メディアと Apple Music」を許可するか、DEMO で遊べます。",
+  "en": "Allow Media & Apple Music in Settings, or play in DEMO.",
+  "hans": "请在“设置”App 中允许“媒体与 Apple Music”，或用 DEMO 来玩。",
+  "hant": "請在「設定」App 中允許「媒體與 Apple Music」，或用 DEMO 來玩。"
+ },
+ {
+  "ja": "渋谷の路上",
+  "en": "SHIBUYA STREET",
+  "hans": "涩谷街头",
+  "hant": "澀谷街頭"
+ },
+ {
+  "ja": "豪華客船",
+  "en": "CRUISE DECK",
+  "hans": "豪华邮轮",
+  "hant": "豪華郵輪"
+ },
+ {
+  "ja": "夜の交差点でストリートパーティー",
+  "en": "Night street party at the crossing",
+  "hans": "夜晚路口的街头派对",
+  "hant": "夜晚路口的街頭派對"
+ },
+ {
+  "ja": "夜の海を行く船のデッキ",
+  "en": "A ship's deck on the night sea",
+  "hans": "夜海航行的邮轮甲板",
+  "hant": "夜海航行的郵輪甲板"
+ }
+]

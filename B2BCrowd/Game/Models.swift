@@ -2,10 +2,26 @@ import Foundation
 import MusicKit
 import SwiftUI
 
-// 日英切り替え。端末の第一言語が日本語なら日本語。
+// 言語の切り替え：端末の第一言語が日本語→日本語、中国語（簡体／繁体）→中国語、それ以外は英語。
+// 中国語は L.t(日本語, 英語, hans:, hant:)（tools/loc_extract.py で差し込む）。無ければ英語。
 enum L {
-    static let isJA: Bool = Locale.preferredLanguages.first?.hasPrefix("ja") ?? false
-    static func t(_ ja: String, _ en: String) -> String { isJA ? ja : en }
+    enum Lang { case ja, en, hans, hant }
+    static let lang: Lang = {
+        let p = Locale.preferredLanguages.first ?? "en"
+        if p.hasPrefix("ja") { return .ja }
+        if p.hasPrefix("zh-Hant") || p.hasPrefix("zh-TW") || p.hasPrefix("zh-HK") || p.hasPrefix("zh-MO") { return .hant }
+        if p.hasPrefix("zh") { return .hans }
+        return .en
+    }()
+    static let isJA: Bool = lang == .ja
+    static func t(_ ja: String, _ en: String, hans: String? = nil, hant: String? = nil) -> String {
+        switch lang {
+        case .ja: return ja
+        case .en: return en
+        case .hans: return hans ?? en
+        case .hant: return hant ?? hans ?? en
+        }
+    }
 }
 
 // MARK: - Track
@@ -162,14 +178,14 @@ enum GameMode: String, CaseIterable, Identifiable, Codable {
     /// 設定画面での名前
     var label: String {
         switch self {
-        case .free: return L.t("フリー B2B", "FREE B2B")
-        case .genre: return L.t("ジャンル縛り", "GENRE BATTLE")
-        case .theme: return L.t("お題バトル", "THEME BATTLE")
-        case .shiritori: return L.t("DJしりとり", "DJ SHIRITORI")
-        case .secret: return L.t("シークレット", "SECRET TRACK")
-        case .timeAttack: return L.t("タイムアタック", "TIME ATTACK")
-        case .survival: return L.t("サバイバル", "SURVIVAL")
-        case .challenge: return L.t("100%チャレンジ", "100% CHALLENGE")
+        case .free: return L.t("フリー B2B", "FREE B2B", hans: "自由 B2B", hant: "自由 B2B")
+        case .genre: return L.t("ジャンル縛り", "GENRE BATTLE", hans: "风格限定", hant: "曲風限定")
+        case .theme: return L.t("お題バトル", "THEME BATTLE", hans: "主题对决", hant: "主題對決")
+        case .shiritori: return L.t("DJしりとり", "DJ SHIRITORI", hans: "DJ 接龙", hant: "DJ 接龍")
+        case .secret: return L.t("シークレット", "SECRET TRACK", hans: "秘密曲目", hant: "秘密曲目")
+        case .timeAttack: return L.t("タイムアタック", "TIME ATTACK", hans: "限时挑战", hant: "限時挑戰")
+        case .survival: return L.t("サバイバル", "SURVIVAL", hans: "生存模式", hant: "生存模式")
+        case .challenge: return L.t("100%チャレンジ", "100% CHALLENGE", hans: "100%挑战", hant: "100%挑戰")
         }
     }
 
@@ -188,14 +204,14 @@ enum GameMode: String, CaseIterable, Identifiable, Codable {
 
     var blurb: String {
         switch self {
-        case .free: return L.t("縛りなし。好きな曲で返し合う。", "No rules. Answer each other with any track.")
-        case .genre: return L.t("決めたジャンルの曲だけで勝負。Apple Music のジャンル情報で判定。", "Stay inside one genre. Judged by Apple Music genre data.")
-        case .theme: return L.t("お題に合う曲で返す。合ってるかは相手DJが判定。", "Pick tracks that fit the theme. Your partner judges.")
-        case .shiritori: return L.t("前の曲から連想した曲で返す。繋がりは相手DJが判定。", "Answer with a track linked to the last one. Your partner judges.")
-        case .secret: return L.t("次の曲は切り替わるまで相手に秘密。", "Your next track stays hidden until it drops.")
-        case .timeAttack: return L.t("制限時間内に次の曲を決める。", "Lock in your next track before the timer runs out.")
-        case .survival: return L.t("ENERGY が 0 になったらフロアが空っぽ。GAME OVER。", "If ENERGY hits 0, the floor empties. Game over.")
-        case .challenge: return L.t("選曲だけで ENERGY 100 を目指す。", "Push the floor to 100 with selection alone.")
+        case .free: return L.t("縛りなし。好きな曲で返し合う。", "No rules. Answer each other with any track.", hans: "没有限制。用喜欢的歌互相接招。", hant: "沒有限制。用喜歡的歌互相接招。")
+        case .genre: return L.t("決めたジャンルの曲だけで勝負。Apple Music のジャンル情報で判定。", "Stay inside one genre. Judged by Apple Music genre data.", hans: "只用选定风格的歌对决。根据 Apple Music 的风格信息判定。", hant: "只用選定曲風的歌對決。依 Apple Music 的曲風資訊判定。")
+        case .theme: return L.t("お題に合う曲で返す。合ってるかは相手DJが判定。", "Pick tracks that fit the theme. Your partner judges.", hans: "用符合主题的歌接招。是否符合由对方 DJ 判定。", hant: "用符合主題的歌接招。是否符合由對方 DJ 判定。")
+        case .shiritori: return L.t("前の曲から連想した曲で返す。繋がりは相手DJが判定。", "Answer with a track linked to the last one. Your partner judges.", hans: "用从上一首联想到的歌接招。关联由对方 DJ 判定。", hant: "用從上一首聯想到的歌接招。關聯由對方 DJ 判定。")
+        case .secret: return L.t("次の曲は切り替わるまで相手に秘密。", "Your next track stays hidden until it drops.", hans: "下一首在切换前对对方保密。", hant: "下一首在切換前對對方保密。")
+        case .timeAttack: return L.t("制限時間内に次の曲を決める。", "Lock in your next track before the timer runs out.", hans: "在限定时间内决定下一首。", hant: "在時限內決定下一首。")
+        case .survival: return L.t("ENERGY が 0 になったらフロアが空っぽ。GAME OVER。", "If ENERGY hits 0, the floor empties. Game over.", hans: "ENERGY 归 0 时舞池就空了。GAME OVER。", hant: "ENERGY 歸 0 時舞池就空了。GAME OVER。")
+        case .challenge: return L.t("選曲だけで ENERGY 100 を目指す。", "Push the floor to 100 with selection alone.", hans: "只靠选曲把 ENERGY 推到 100。", hant: "只靠選曲把 ENERGY 推到 100。")
         }
     }
 
@@ -257,9 +273,9 @@ enum CrowdMode: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .ai: return L.t("AI 観客", "AI")
-        case .player: return L.t("周りの人", "PLAYER")
-        case .mix: return L.t("両方", "MIX")
+        case .ai: return L.t("AI 観客", "AI", hans: "AI 观众", hant: "AI 觀眾")
+        case .player: return L.t("周りの人", "PLAYER", hans: "周围的人", hant: "身邊的人")
+        case .mix: return L.t("両方", "MIX", hans: "混合", hant: "混合")
         }
     }
     var title: String {
@@ -274,21 +290,23 @@ enum CrowdMode: String, CaseIterable, Identifiable, Codable {
 // MARK: - Venue
 
 enum Venue: String, CaseIterable, Identifiable, Codable {
-    case smallClub, underground, warehouse, rooftop, beach, tokyoNight, cyberClub, megaFestival, spaceClub, forestRave, recordShop
+    case smallClub, underground, warehouse, rooftop, beach, tokyoNight, cyberClub, megaFestival, spaceClub, forestRave, recordShop, shibuyaStreet, cruiseDeck
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .smallClub: return L.t("小さなクラブ", "SMALL CLUB")
-        case .underground: return L.t("地下クラブ", "UNDERGROUND")
-        case .warehouse: return L.t("倉庫レイヴ", "WAREHOUSE")
-        case .rooftop: return L.t("屋上", "ROOFTOP")
-        case .beach: return L.t("ビーチ", "BEACH")
-        case .tokyoNight: return L.t("東京の夜", "TOKYO NIGHT")
-        case .cyberClub: return L.t("サイバークラブ", "CYBER CLUB")
-        case .megaFestival: return L.t("巨大フェス", "MEGA FESTIVAL")
-        case .spaceClub: return L.t("宇宙クラブ", "SPACE CLUB")
-        case .forestRave: return L.t("森のレイヴ", "FOREST RAVE")
-        case .recordShop: return L.t("レコード屋", "RECORD SHOP")
+        case .smallClub: return L.t("小さなクラブ", "SMALL CLUB", hans: "小型俱乐部", hant: "小型夜店")
+        case .underground: return L.t("地下クラブ", "UNDERGROUND", hans: "地下俱乐部", hant: "地下夜店")
+        case .warehouse: return L.t("倉庫レイヴ", "WAREHOUSE", hans: "仓库锐舞", hant: "倉庫派對")
+        case .rooftop: return L.t("屋上", "ROOFTOP", hans: "屋顶", hant: "屋頂")
+        case .beach: return L.t("ビーチ", "BEACH", hans: "海滩", hant: "海灘")
+        case .tokyoNight: return L.t("東京の夜", "TOKYO NIGHT", hans: "东京之夜", hant: "東京之夜")
+        case .cyberClub: return L.t("サイバークラブ", "CYBER CLUB", hans: "赛博俱乐部", hant: "賽博夜店")
+        case .megaFestival: return L.t("巨大フェス", "MEGA FESTIVAL", hans: "超大音乐节", hant: "超大音樂祭")
+        case .spaceClub: return L.t("宇宙クラブ", "SPACE CLUB", hans: "太空俱乐部", hant: "太空夜店")
+        case .forestRave: return L.t("森のレイヴ", "FOREST RAVE", hans: "森林锐舞", hant: "森林派對")
+        case .recordShop: return L.t("レコード屋", "RECORD SHOP", hans: "唱片店", hant: "唱片行")
+        case .shibuyaStreet: return L.t("渋谷の路上", "SHIBUYA STREET", hans: "涩谷街头", hant: "澀谷街頭")
+        case .cruiseDeck: return L.t("豪華客船", "CRUISE DECK", hans: "豪华邮轮", hant: "豪華郵輪")
         }
     }
 
@@ -305,14 +323,18 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
         case .spaceClub: return "SPACE CLUB"
         case .forestRave: return "FOREST RAVE"
         case .recordShop: return "RECORD SHOP"
+        case .shibuyaStreet: return "SHIBUYA STREET"
+        case .cruiseDeck: return "CRUISE DECK"
         }
     }
 
     /// 会場カードの一言（専用の観客がいる会場）
     var subtitle: String? {
         switch self {
-        case .forestRave: return L.t("森の野外レイヴ", "Outdoor forest rave")
-        case .recordShop: return L.t("レコード屋の店内", "Inside a record shop")
+        case .forestRave: return L.t("森の野外レイヴ", "Outdoor forest rave", hans: "森林户外锐舞", hant: "森林戶外派對")
+        case .recordShop: return L.t("レコード屋の店内", "Inside a record shop", hans: "唱片店内", hant: "唱片行店內")
+        case .shibuyaStreet: return L.t("夜の交差点でストリートパーティー", "Night street party at the crossing", hans: "夜晚路口的街头派对", hant: "夜晚路口的街頭派對")
+        case .cruiseDeck: return L.t("夜の海を行く船のデッキ", "A ship's deck on the night sea", hans: "夜海航行的邮轮甲板", hant: "夜海航行的郵輪甲板")
         default: return nil
         }
     }
@@ -331,13 +353,15 @@ enum Venue: String, CaseIterable, Identifiable, Codable {
         case .spaceClub: return (Color(red: 0.02, green: 0.0, blue: 0.08), .black, Color(red: 0.6, green: 0.5, blue: 1))
         case .forestRave: return (Color(red: 0.03, green: 0.08, blue: 0.05), Color(red: 0.01, green: 0.02, blue: 0.01), Color(red: 0.5, green: 1, blue: 0.4))
         case .recordShop: return (Color(red: 0.14, green: 0.08, blue: 0.04), Color(red: 0.03, green: 0.02, blue: 0.01), Color(red: 1, green: 0.7, blue: 0.35))
+        case .shibuyaStreet: return (Color(red: 0.08, green: 0.04, blue: 0.16), Color(red: 0.02, green: 0.01, blue: 0.04), Color(red: 1, green: 0.3, blue: 0.7))
+        case .cruiseDeck: return (Color(red: 0.03, green: 0.06, blue: 0.16), Color(red: 0.01, green: 0.02, blue: 0.05), Color(red: 1, green: 0.85, blue: 0.5))
         }
     }
 
     var crowdSize: Int {
         switch self {
         case .smallClub, .underground, .recordShop: return 26
-        case .forestRave: return 38
+        case .forestRave, .shibuyaStreet, .cruiseDeck: return 38
         case .warehouse, .rooftop, .beach, .tokyoNight, .cyberClub: return 38
         case .megaFestival, .spaceClub: return 52
         }
@@ -352,13 +376,13 @@ enum VJMode: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .auto: return L.t("おまかせ", "AUTO")
-        case .tunnel: return L.t("トンネル", "TUNNEL")
-        case .kaleido: return L.t("万華鏡", "KALEIDO")
-        case .artwork: return L.t("ジャケット", "ARTWORK")
-        case .plasma: return L.t("プラズマ", "PLASMA")
-        case .typo: return L.t("文字", "TYPO")
-        case .off: return L.t("なし", "OFF")
+        case .auto: return L.t("おまかせ", "AUTO", hans: "自动", hant: "自動")
+        case .tunnel: return L.t("トンネル", "TUNNEL", hans: "隧道", hant: "隧道")
+        case .kaleido: return L.t("万華鏡", "KALEIDO", hans: "万花筒", hant: "萬花筒")
+        case .artwork: return L.t("ジャケット", "ARTWORK", hans: "专辑封面", hant: "專輯封面")
+        case .plasma: return L.t("プラズマ", "PLASMA", hans: "等离子", hant: "電漿")
+        case .typo: return L.t("文字", "TYPO", hans: "文字", hant: "文字")
+        case .off: return L.t("なし", "OFF", hans: "无", hant: "無")
         }
     }
     var title: String {

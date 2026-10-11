@@ -31,7 +31,7 @@ final class MusicKitPlayer: TrackPlayer {
             // 相手の iPhone で選ばれた曲。こちらのカタログから id で引き直す
             let req = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(track.id))
             guard let s = try await req.response().items.first else {
-                throw LinkError(L.t("この曲はこちらの Apple Music で見つかりません", "This track isn't in this Apple Music storefront"))
+                throw LinkError(L.t("この曲はこちらの Apple Music で見つかりません", "This track isn't in this Apple Music storefront", hans: "在这边的 Apple Music 中找不到这首歌", hant: "在這邊的 Apple Music 找不到這首歌"))
             }
             song = s
         default:

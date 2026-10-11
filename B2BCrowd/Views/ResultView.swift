@@ -29,7 +29,7 @@ struct ResultView: View {
 
                 if !app.unlocked.values.flatMap({ $0 }).isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(L.t("新しい実績", "NEW ACHIEVEMENTS")).font(.system(size: 12, weight: .heavy, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
+                        Text(L.t("新しい実績", "NEW ACHIEVEMENTS", hans: "新成就", hant: "新成就")).font(.system(size: 12, weight: .heavy, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
                         ForEach(app.unlocked.keys.sorted(), id: \.self) { name in
                             ForEach(app.unlocked[name] ?? [], id: \.rawValue) { a in
                                 Label("\(name) · \(a.title)", systemImage: "rosette").font(.system(size: 14, weight: .bold)).foregroundStyle(.yellow)
@@ -43,16 +43,16 @@ struct ResultView: View {
 
                 if let img = shareImage {
                     ShareLink(item: img, preview: SharePreview("B2B CROWD DUO", image: img)) {
-                        Label(L.t("リザルトをシェア", "Share result"), systemImage: "square.and.arrow.up")
+                        Label(L.t("リザルトをシェア", "Share result", hans: "分享结果", hant: "分享結果"), systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(NeonButtonStyle(color: .cyan, filled: false))
                 }
 
                 if app.link.role != .guest {
-                Button { app.start() } label: { Label(L.t("同じ設定でもう一回", "REMATCH"), systemImage: "arrow.clockwise") }
+                Button { app.start() } label: { Label(L.t("同じ設定でもう一回", "REMATCH", hans: "相同设置再来一次", hant: "相同設定再來一次"), systemImage: "arrow.clockwise") }
                     .buttonStyle(NeonButtonStyle(color: .pink))
                 }
-                Button { app.backToLobby() } label: { Text(L.t("設定を変える", "CHANGE SETUP")) }
+                Button { app.backToLobby() } label: { Text(L.t("設定を変える", "CHANGE SETUP", hans: "更改设置", hant: "變更設定")) }
                     .buttonStyle(NeonButtonStyle(color: .cyan, filled: false))
                 Button { app.backToTitle() } label: { Text("TITLE") }
                     .foregroundStyle(.white.opacity(0.7))

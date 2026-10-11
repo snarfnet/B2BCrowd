@@ -165,10 +165,10 @@ final class LinkService: NSObject {
             browser?.startBrowsingForPeers()
         }
         if wasConnected {
-            lastError = L.t("接続が切れました", "Connection lost")
+            lastError = L.t("接続が切れました", "Connection lost", hans: "连接已断开", hant: "連線已中斷")
             onDisconnect?()
         } else {
-            lastError = L.t("つながりませんでした。もう一度試してください", "Couldn't connect. Try again.")
+            lastError = L.t("つながりませんでした。もう一度試してください", "Couldn't connect. Try again.", hans: "连接失败。请再试一次", hant: "連線失敗。請再試一次")
         }
     }
 

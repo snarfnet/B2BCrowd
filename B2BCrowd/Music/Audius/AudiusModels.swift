@@ -101,12 +101,12 @@ enum AudiusBlockReason: Equatable {
 
     var label: String {
         switch self {
-        case .notStreamable: return L.t("ストリーム不可", "NOT STREAMABLE")
-        case .gated: return L.t("限定公開", "GATED")
-        case .accessRestricted: return L.t("アクセス制限", "RESTRICTED")
-        case .apiKeyRestricted: return L.t("他アプリ専用", "APP-RESTRICTED")
-        case .unavailable: return L.t("公開終了", "UNAVAILABLE")
-        case .licensePolicy: return L.t("ライセンス対象外", "LICENSE FILTERED")
+        case .notStreamable: return L.t("ストリーム不可", "NOT STREAMABLE", hans: "不可串流", hant: "無法串流")
+        case .gated: return L.t("限定公開", "GATED", hans: "限定公开", hant: "限定公開")
+        case .accessRestricted: return L.t("アクセス制限", "RESTRICTED", hans: "访问受限", hant: "存取受限")
+        case .apiKeyRestricted: return L.t("他アプリ専用", "APP-RESTRICTED", hans: "其他应用专用", hant: "其他 App 專用")
+        case .unavailable: return L.t("公開終了", "UNAVAILABLE", hans: "已下架", hant: "已下架")
+        case .licensePolicy: return L.t("ライセンス対象外", "LICENSE FILTERED", hans: "不在授权范围内", hant: "不在授權範圍內")
         }
     }
 }
@@ -204,15 +204,15 @@ enum AudiusError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .network: return L.t("通信できませんでした。接続を確認してください", "Network error. Check your connection.")
-        case .api(let code): return L.t("Audius の応答エラー（\(code)）", "Audius API error (\(code))")
-        case .rateLimited: return L.t("リクエストが多すぎます。少し待ってください", "Too many requests. Wait a moment.")
-        case .authentication: return L.t("Audius の認証に失敗しました（API キーを確認）", "Audius authentication failed (check the API key).")
-        case .trackUnavailable(let r): return L.t("この曲は現在 B2B で再生できません（\(r.label)）", "This track can't play in B2B right now (\(r.label)).")
-        case .streamFailed: return L.t("ストリーミングを開始できませんでした。別の曲を選んでください", "Couldn't start the stream. Pick another track.")
-        case .regionRestricted: return L.t("この地域では再生できない曲です", "This track isn't available in your region.")
-        case .accessRestricted: return L.t("この曲はアクセスが制限されています", "Access to this track is restricted.")
-        case .decoding: return L.t("Audius の応答を読めませんでした", "Couldn't read the Audius response.")
+        case .network: return L.t("通信できませんでした。接続を確認してください", "Network error. Check your connection.", hans: "网络连接失败。请检查连接", hant: "無法連線。請檢查網路連線")
+        case .api(let code): return L.t("Audius の応答エラー（\(code)）", "Audius API error (\(code))", hans: "Audius 响应错误（\(code)）", hant: "Audius 回應錯誤（\(code)）")
+        case .rateLimited: return L.t("リクエストが多すぎます。少し待ってください", "Too many requests. Wait a moment.", hans: "请求过多。请稍候", hant: "請求過多。請稍候")
+        case .authentication: return L.t("Audius の認証に失敗しました（API キーを確認）", "Audius authentication failed (check the API key).", hans: "Audius 认证失败（请检查 API 密钥）", hant: "Audius 驗證失敗（請檢查 API 金鑰）")
+        case .trackUnavailable(let r): return L.t("この曲は現在 B2B で再生できません（\(r.label)）", "This track can't play in B2B right now (\(r.label)).", hans: "这首歌目前无法在 B2B 中播放（\(r.label)）", hant: "這首歌目前無法在 B2B 中播放（\(r.label)）")
+        case .streamFailed: return L.t("ストリーミングを開始できませんでした。別の曲を選んでください", "Couldn't start the stream. Pick another track.", hans: "无法开始串流播放。请选择其他歌曲", hant: "無法開始串流。請選擇其他歌曲")
+        case .regionRestricted: return L.t("この地域では再生できない曲です", "This track isn't available in your region.", hans: "这首歌在你所在的地区无法播放", hant: "這首歌在你所在的地區無法播放")
+        case .accessRestricted: return L.t("この曲はアクセスが制限されています", "Access to this track is restricted.", hans: "这首歌的访问受到限制", hant: "這首歌的存取受到限制")
+        case .decoding: return L.t("Audius の応答を読めませんでした", "Couldn't read the Audius response.", hans: "无法读取 Audius 的响应", hant: "無法讀取 Audius 的回應")
         }
     }
 }

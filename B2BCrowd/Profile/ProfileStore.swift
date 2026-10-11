@@ -30,13 +30,13 @@ enum Achievement: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .firstSession: return L.t("初B2B", "First B2B")
+        case .firstSession: return L.t("初B2B", "First B2B", hans: "首次 B2B", hant: "首次 B2B")
         case .combo5: return "5 COMBO"
         case .combo10: return "10 COMBO"
         case .legend: return "LEGENDARY FLOOR"
-        case .survivor: return L.t("生還者（SURVIVAL完走）", "Survivor")
-        case .quickHands: return L.t("早撃ち（TIME ATTACK完走）", "Quick Hands")
-        case .tenSessions: return L.t("10セッション", "10 Sessions")
+        case .survivor: return L.t("生還者（SURVIVAL完走）", "Survivor", hans: "幸存者（完成 SURVIVAL）", hant: "倖存者（完成 SURVIVAL）")
+        case .quickHands: return L.t("早撃ち（TIME ATTACK完走）", "Quick Hands", hans: "快手（完成 TIME ATTACK）", hant: "快手（完成 TIME ATTACK）")
+        case .tenSessions: return L.t("10セッション", "10 Sessions", hans: "10 场演出", hant: "10 場演出")
         }
     }
 }

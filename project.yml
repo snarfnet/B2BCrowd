@@ -36,7 +36,7 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDevelopmentRegion: ja
-        CFBundleLocalizations: [ja, en]
+        CFBundleLocalizations: [ja, en, zh-Hans, zh-Hant]
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
         AudiusAPIKey: "$(AUDIUS_API_KEY)"

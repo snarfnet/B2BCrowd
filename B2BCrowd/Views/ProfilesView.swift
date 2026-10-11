@@ -26,7 +26,7 @@ struct ProfilesView: View {
                             .autocorrectionDisabled()
                             .padding(10)
                             .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.08)))
-                        Button(L.t("追加", "Add")) {
+                        Button(L.t("追加", "Add", hans: "添加", hant: "新增")) {
                             let n = newName.trimmingCharacters(in: .whitespaces)
                             guard !n.isEmpty, store.profile(named: n) == nil else { return }
                             store.upsert(DJProfile(name: n))
@@ -36,7 +36,7 @@ struct ProfilesView: View {
                     }
 
                     if store.profiles.isEmpty {
-                        Text(L.t("セッションを遊ぶと DJ 名ごとに記録が残ります。", "Play a session and each DJ name keeps its own record."))
+                        Text(L.t("セッションを遊ぶと DJ 名ごとに記録が残ります。", "Play a session and each DJ name keeps its own record.", hans: "玩过演出后，每个 DJ 名称都会留下记录。", hant: "玩過演出後，每個 DJ 名稱都會留下紀錄。"))
                             .font(.footnote).foregroundStyle(.white.opacity(0.6)).padding(.top, 30)
                     }
 
@@ -70,7 +70,7 @@ struct ProfilesView: View {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 4) {
                 GridRow { stat("SESSIONS", "\(p.sessions)"); stat("BEST ENERGY", "\(p.bestEnergy)") }
                 GridRow { stat("BEST COMBO", "\(p.bestCombo)"); stat("BEST SCORE", "\(p.bestScore)") }
-                GridRow { stat(L.t("好きなジャンル", "FAV GENRE"), p.favoriteGenre ?? "—"); Color.clear.frame(height: 1) }
+                GridRow { stat(L.t("好きなジャンル", "FAV GENRE", hans: "喜欢的风格", hant: "喜歡的曲風"), p.favoriteGenre ?? "—"); Color.clear.frame(height: 1) }
             }
             if !p.achievements.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {

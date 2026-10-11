@@ -57,6 +57,10 @@ jobs:
         shot() { xcrun simctl io "$UDID" screenshot "shots/$1.png"; }
         run() { xcrun simctl terminate "$UDID" com.tokyonasu.B2BCrowd || true; xcrun simctl launch "$UDID" com.tokyonasu.B2BCrowd -AppleLanguages "(ja)" -shot "$@"; }
         run title; sleep 15; shot 01_title
+        xcrun simctl terminate "$UDID" com.tokyonasu.B2BCrowd || true
+        xcrun simctl launch "$UDID" com.tokyonasu.B2BCrowd -AppleLanguages "(zh-Hans)" -shot lobby; sleep 6; shot 02z_lobby_zh_hans
+        xcrun simctl terminate "$UDID" com.tokyonasu.B2BCrowd || true
+        xcrun simctl launch "$UDID" com.tokyonasu.B2BCrowd -AppleLanguages "(zh-Hant)" -shot title; sleep 10; shot 01z_title_zh_hant
         run lobby; sleep 3; shot 02a_lobby_3s
         sleep 5; shot 02_lobby
         rec() { xcrun simctl io "$UDID" recordVideo --codec=h264 --force "shots/$1.mp4" & REC=$!; sleep 1; }

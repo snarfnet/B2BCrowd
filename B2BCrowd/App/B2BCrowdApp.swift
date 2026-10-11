@@ -248,9 +248,9 @@ final class AppModel {
 enum SplitMode: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
-        case .auto: return L.t("自動", "AUTO")
-        case .on: return L.t("分ける", "ON")
-        case .off: return L.t("分けない", "OFF")
+        case .auto: return L.t("自動", "AUTO", hans: "自动", hant: "自動")
+        case .on: return L.t("分ける", "ON", hans: "分屏", hant: "分割")
+        case .off: return L.t("分けない", "OFF", hans: "不分屏", hant: "不分割")
         }
     }
     case auto, on, off

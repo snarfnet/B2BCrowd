@@ -71,7 +71,7 @@ struct SplitColumn: View {
             .buttonStyle(.bordered).tint(.pink)
             .disabled(game.likedThisRound)
             if game.needsJudge {
-                Text(game.config.mode == .shiritori ? L.t("繋がってる？", "Linked?") : L.t("お題に合ってる？", "Fits the theme?"))
+                Text(game.config.mode == .shiritori ? L.t("繋がってる？", "Linked?", hans: "接得上吗？", hant: "接得上嗎？") : L.t("お題に合ってる？", "Fits the theme?", hans: "符合主题吗？", hant: "符合主題嗎？"))
                     .font(.system(size: 11, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 0)
                 Button { game.judge(true) } label: { Image(systemName: "checkmark") }.buttonStyle(.borderedProminent).tint(.green)
@@ -123,10 +123,10 @@ struct SplitColumn: View {
                 Text(game.current?.title ?? "").font(.system(size: 14, weight: .bold)).lineLimit(1)
             }
             Text(game.isAuto(dj) && game.selector == dj
-                 ? L.t("AUTO が曲を探しています…", "AUTO is digging for a track…")
+                 ? L.t("AUTO が曲を探しています…", "AUTO is digging for a track…", hans: "AUTO 正在找歌…", hant: "AUTO 正在找歌…")
                  : game.phase == .searchingTrack
-                 ? L.t("\(game.name(1 - dj)) が1曲目を選んでいます", "\(game.name(1 - dj)) is picking the opener")
-                 : L.t("\(game.name(1 - dj)) が次の曲を選んでいます", "\(game.name(1 - dj)) is picking next"))
+                 ? L.t("\(game.name(1 - dj)) が1曲目を選んでいます", "\(game.name(1 - dj)) is picking the opener", hans: "\(game.name(1 - dj)) 正在选第一首", hant: "\(game.name(1 - dj)) 正在選第一首")
+                 : L.t("\(game.name(1 - dj)) が次の曲を選んでいます", "\(game.name(1 - dj)) is picking next", hans: "\(game.name(1 - dj)) 正在选下一首", hant: "\(game.name(1 - dj)) 正在選下一首"))
                 .font(.system(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
             if game.showsPad, game.current != nil {

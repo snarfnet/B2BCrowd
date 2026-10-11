@@ -55,8 +55,8 @@ struct SessionView: View {
         .onChange(of: scenePhase) { _, s in
             if s == .background { game.pause() }
         }
-        .confirmationDialog(L.t("セッションを終了しますか？", "End this session?"), isPresented: $confirmQuit, titleVisibility: .visible) {
-            Button(L.t("終了してリザルトへ", "End and see results"), role: .destructive) { game.quit() }
+        .confirmationDialog(L.t("セッションを終了しますか？", "End this session?", hans: "要结束这场演出吗？", hant: "要結束這場演出嗎？"), isPresented: $confirmQuit, titleVisibility: .visible) {
+            Button(L.t("終了してリザルトへ", "End and see results", hans: "结束并查看结果", hant: "結束並查看結果"), role: .destructive) { game.quit() }
         }
     }
 
@@ -200,7 +200,7 @@ struct SessionView: View {
                 Text("NOW · \(game.current == nil ? "—" : game.name(game.currentOwner))")
                     .font(.system(size: 11, weight: .heavy, design: .monospaced))
                     .foregroundStyle(game.currentOwner == 0 ? .pink : .cyan)
-                Text(game.current?.title ?? L.t("まだ何も流れていない", "Nothing playing yet"))
+                Text(game.current?.title ?? L.t("まだ何も流れていない", "Nothing playing yet", hans: "还没有播放任何歌曲", hant: "還沒有播放任何歌曲"))
                     .font(.system(size: 17, weight: .bold)).lineLimit(1)
                 HStack(spacing: 6) {
                     Text(game.current?.artist ?? " ").font(.system(size: 13)).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
@@ -249,8 +249,8 @@ struct SessionView: View {
                 HStack(spacing: 10) {
                     ProgressView().tint(tint)
                     Text(game.isAuto(dj)
-                         ? L.t("AUTO：\(game.name(dj)) が曲を探しています…", "AUTO: \(game.name(dj)) is digging for a track…")
-                         : L.t("\(game.name(dj)) が相手の iPhone で選曲中…", "\(game.name(dj)) is picking on their iPhone…"))
+                         ? L.t("AUTO：\(game.name(dj)) が曲を探しています…", "AUTO: \(game.name(dj)) is digging for a track…", hans: "AUTO：\(game.name(dj)) 正在找歌…", hant: "AUTO：\(game.name(dj)) 正在找歌…")
+                         : L.t("\(game.name(dj)) が相手の iPhone で選曲中…", "\(game.name(dj)) is picking on their iPhone…", hans: "\(game.name(dj)) 正在对方的 iPhone 上选曲…", hant: "\(game.name(dj)) 正在對方的 iPhone 上選曲…"))
                         .font(.system(size: 14, weight: .bold))
                     Spacer()
                 }
@@ -262,19 +262,19 @@ struct SessionView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     VStack(alignment: .leading) {
                         Text(nextHidden ? "SECRET TRACK 🔒" : n.title).font(.system(size: 15, weight: .bold)).lineLimit(1)
-                        Text(nextHidden ? L.t("切り替わるまで秘密", "Hidden until it drops") : n.artist)
+                        Text(nextHidden ? L.t("切り替わるまで秘密", "Hidden until it drops", hans: "切换前保密", hant: "切換前保密") : n.artist)
                             .font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
                     }
                     Spacer()
                     if game.canPickHere {
-                        Button(L.t("変更", "Change")) { openSearch() }.buttonStyle(.bordered).tint(tint)
+                        Button(L.t("変更", "Change", hans: "更换", hant: "更換")) { openSearch() }.buttonStyle(.bordered).tint(tint)
                         Button { game.clearNext() } label: { Image(systemName: "xmark") }.buttonStyle(.bordered).tint(.gray)
                     }
                 }
             } else {
                 HStack(spacing: 10) {
                     Button { openSearch() } label: {
-                        Label(L.t("次の曲を選ぶ", "PICK NEXT TRACK"), systemImage: "magnifyingglass")
+                        Label(L.t("次の曲を選ぶ", "PICK NEXT TRACK", hans: "选下一首", hant: "選下一首"), systemImage: "magnifyingglass")
                     }
                     .buttonStyle(NeonButtonStyle(color: tint))
                     Button("PASS") { game.pass() }
@@ -313,8 +313,8 @@ struct SessionView: View {
             if game.needsJudge && game.canJudgeHere {
                 HStack(spacing: 10) {
                     Text(game.config.mode == .shiritori
-                         ? L.t("\(game.name(1 - game.currentOwner))：繋がってる？", "\(game.name(1 - game.currentOwner)): linked?")
-                         : L.t("\(game.name(1 - game.currentOwner))：お題「\(game.config.theme)」に合ってる？", "\(game.name(1 - game.currentOwner)): fits “\(game.config.theme)”?"))
+                         ? L.t("\(game.name(1 - game.currentOwner))：繋がってる？", "\(game.name(1 - game.currentOwner)): linked?", hans: "\(game.name(1 - game.currentOwner))：接得上吗？", hant: "\(game.name(1 - game.currentOwner))：接得上嗎？")
+                         : L.t("\(game.name(1 - game.currentOwner))：お題「\(game.config.theme)」に合ってる？", "\(game.name(1 - game.currentOwner)): fits “\(game.config.theme)”?", hans: "\(game.name(1 - game.currentOwner))：符合主题“\(game.config.theme)”吗？", hant: "\(game.name(1 - game.currentOwner))：符合主題「\(game.config.theme)」嗎？"))
                         .font(.system(size: 12, weight: .bold)).lineLimit(2)
                     Spacer()
                     Button { game.judge(true) } label: { Image(systemName: "checkmark") }.buttonStyle(.borderedProminent).tint(.green)
@@ -357,10 +357,10 @@ struct SessionView: View {
         case .searchingTrack where !isSplit:
             overlayCard {
                 LEDText(text: "OPENING", size: 30, color: .pink)
-                Text(L.t("\(game.name(game.selector)) が1曲目を選ぶ", "\(game.name(game.selector)) picks the opener"))
+                Text(L.t("\(game.name(game.selector)) が1曲目を選ぶ", "\(game.name(game.selector)) picks the opener", hans: "\(game.name(game.selector)) 选第一首", hant: "\(game.name(game.selector)) 選第一首"))
                     .font(.headline)
                 if game.canPickHere {
-                    Button { openSearch() } label: { Label(L.t("1曲目を選ぶ", "PICK OPENER"), systemImage: "magnifyingglass") }
+                    Button { openSearch() } label: { Label(L.t("1曲目を選ぶ", "PICK OPENER", hans: "选第一首", hant: "選第一首"), systemImage: "magnifyingglass") }
                         .buttonStyle(NeonButtonStyle(color: .pink))
                 } else {
                     ProgressView().tint(.pink)
@@ -370,11 +370,11 @@ struct SessionView: View {
             VStack {
                 Spacer()
                 VStack(spacing: 6) {
-                    LEDText(text: L.t("無音！", "SILENCE!"), size: 30, color: .red)
-                    Text(L.t("\(game.name(game.selector)) 早く次の曲を！", "\(game.name(game.selector)), drop the next track!"))
+                    LEDText(text: L.t("無音！", "SILENCE!", hans: "没声音了！", hant: "沒聲音了！"), size: 30, color: .red)
+                    Text(L.t("\(game.name(game.selector)) 早く次の曲を！", "\(game.name(game.selector)), drop the next track!", hans: "\(game.name(game.selector)) 快放下一首！", hant: "\(game.name(game.selector)) 快放下一首！"))
                         .font(.headline)
                     if game.canPickHere {
-                        Button { openSearch() } label: { Label(L.t("次の曲を選ぶ", "PICK NEXT TRACK"), systemImage: "magnifyingglass") }
+                        Button { openSearch() } label: { Label(L.t("次の曲を選ぶ", "PICK NEXT TRACK", hans: "选下一首", hant: "選下一首"), systemImage: "magnifyingglass") }
                             .buttonStyle(NeonButtonStyle(color: .red))
                     }
                 }
@@ -389,9 +389,9 @@ struct SessionView: View {
         case .paused:
             overlayCard {
                 LEDText(text: "PAUSED", size: 34, color: .yellow)
-                Button { Task { await game.resume() } } label: { Label(L.t("再開", "RESUME"), systemImage: "play.fill") }
+                Button { Task { await game.resume() } } label: { Label(L.t("再開", "RESUME", hans: "继续", hant: "繼續"), systemImage: "play.fill") }
                     .buttonStyle(NeonButtonStyle(color: .green))
-                Button { confirmQuit = true } label: { Label(L.t("セッション終了", "END SESSION"), systemImage: "stop.fill") }
+                Button { confirmQuit = true } label: { Label(L.t("セッション終了", "END SESSION", hans: "结束演出", hant: "結束演出"), systemImage: "stop.fill") }
                     .buttonStyle(NeonButtonStyle(color: .red, filled: false))
             }
         default:
@@ -414,14 +414,14 @@ struct SessionView: View {
             VStack(spacing: 16) {
                 Image(systemName: "eye.slash.fill").font(.system(size: 40)).foregroundStyle(.purple)
                 LEDText(text: "SECRET TRACK", size: 26, color: .purple)
-                Text(L.t("\(game.name(game.selector)) だけが画面を見てください", "Only \(game.name(game.selector)) should look now"))
+                Text(L.t("\(game.name(game.selector)) だけが画面を見てください", "Only \(game.name(game.selector)) should look now", hans: "请只让 \(game.name(game.selector)) 看画面", hant: "請只讓 \(game.name(game.selector)) 看畫面"))
                     .font(.headline).multilineTextAlignment(.center)
-                Button(L.t("OK、選ぶ", "OK, pick")) {
+                Button(L.t("OK、選ぶ", "OK, pick", hans: "OK，开始选", hant: "OK，開始選")) {
                     showHandoff = false
                     showSearch = true
                 }
                 .buttonStyle(NeonButtonStyle(color: .purple))
-                Button(L.t("やめる", "Cancel")) { showHandoff = false }.foregroundStyle(.white.opacity(0.7))
+                Button(L.t("やめる", "Cancel", hans: "取消", hant: "取消")) { showHandoff = false }.foregroundStyle(.white.opacity(0.7))
             }
             .padding(28)
             .frame(maxWidth: 360)
