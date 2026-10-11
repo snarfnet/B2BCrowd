@@ -138,7 +138,9 @@ final class GameEngine {
         case .searchingTrack, .waitingForNextDJ:
             beginTransition()
         default:
-            break
+            // a song is playing: load the pick now so the switch is gapless
+            let p = player
+            Task { @MainActor in await p.preload(t) }
         }
     }
 
@@ -147,6 +149,7 @@ final class GameEngine {
         guard phase != .transition else { return }
         next = nil
         selectedAt = nil
+        player.cancelPreload()
     }
 
     func pass() {

@@ -16,6 +16,15 @@ protocol TrackPlayer: AnyObject {
     var hasStopped: Bool { get }
     /// 着信などで中断された
     var isInterrupted: Bool { get }
+    /// 次の曲を先に読み込んでおく（切り替えの瞬間にすぐ鳴らすため）
+    func preload(_ track: Track) async
+    /// 先読みを取り消す（次の曲を選び直したとき）
+    func cancelPreload()
+}
+
+extension TrackPlayer {
+    func preload(_ track: Track) async {}
+    func cancelPreload() {}
 }
 
 @MainActor
@@ -37,9 +46,49 @@ final class MusicKitPlayer: TrackPlayer {
         default:
             return
         }
+        if preloadedID == track.id, player.queue.entries.count > 1 {
+            // already queued right after the current song: the jump is instant
+            preloadedID = nil
+            do {
+                try await player.skipToNextEntry()
+                if player.state.playbackStatus != .playing { try await player.play() }
+                return
+            } catch { /* fall back to a fresh queue */ }
+        }
+        preloadedID = nil
         player.queue = ApplicationMusicPlayer.Queue(for: [song])
         try await player.prepareToPlay()
         try await player.play()
+    }
+
+    private var preloadedID: String?
+
+    func preload(_ track: Track) async {
+        let song: Song
+        switch track.source {
+        case .appleMusic(let s): song = s
+        case .appleMusicRef:
+            let req = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: MusicItemID(track.id))
+            guard let s = try? await req.response().items.first else { return }
+            song = s
+        default: return
+        }
+        guard player.state.playbackStatus == .playing || player.state.playbackStatus == .paused else { return }
+        cancelPreload()
+        do {
+            try await player.queue.insert(song, position: .afterCurrentEntry)
+            preloadedID = track.id
+        } catch { preloadedID = nil }
+    }
+
+    func cancelPreload() {
+        guard preloadedID != nil else { return }
+        preloadedID = nil
+        // drop whatever was queued after the current song
+        if let cur = player.queue.currentEntry, let i = player.queue.entries.firstIndex(where: { $0.id == cur.id }) {
+            let after = player.queue.entries.index(after: i)
+            if after < player.queue.entries.endIndex { player.queue.entries.removeSubrange(after..<player.queue.entries.endIndex) }
+        }
     }
 
     func stop() { player.stop() }
